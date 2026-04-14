@@ -58,15 +58,24 @@
 
 ```
 ecom-service-agent/
-├── README.md
-└── (即将更新...)
+├── main.py                   # CLI 入口，多轮对话循环
+├── requirements.txt          # Python 依赖
+├── .env.example              # 环境变量示例
+├── config/
+│   └── settings.py           # 配置管理（从 .env 读取）
+├── prompts/
+│   └── customer_service.py   # 电商客服 system prompt
+├── schemas/
+│   └── response.py           # 结构化输出 schema（Pydantic）
+└── agent/
+    └── chat.py               # 核心对话逻辑
 ```
 
 ### 更新日志
 
-| 期数 | 主题 | Tag | 日期 | 小红书笔记 |
-|------|------|-----|------|------------|
-| - | 项目初始化 | - | 2025-04-14 | - |
+| 期数 | 主题 | Tag | 日期 |
+|------|------|-----|------|
+| 第 1 期 | 项目框架 + 纯 Prompt 客服 + 结构化输出 | v1-prompt-and-structured-output | 2025-04-14 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
 
