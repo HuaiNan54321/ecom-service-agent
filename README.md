@@ -58,17 +58,22 @@
 
 ```
 ecom-service-agent/
-├── main.py                   # CLI 入口，多轮对话循环
+├── main.py                   # CLI 入口，多轮对话循环（启动恢复 + 退出保存）
 ├── requirements.txt          # Python 依赖
 ├── .env.example              # 环境变量示例
 ├── config/
 │   └── settings.py           # 配置管理（从 .env 读取）
 ├── prompts/
-│   └── customer_service.py   # 电商客服 system prompt
+│   ├── customer_service.py   # 电商客服 system prompt
+│   └── summarizer.py         # 历史摘要 prompt
 ├── schemas/
 │   └── response.py           # 结构化输出 schema（Pydantic）
-└── agent/
-    └── chat.py               # 核心对话逻辑
+├── agent/
+│   ├── chat.py               # 核心对话逻辑（含压缩触发）
+│   ├── summarizer.py         # LLM 自我压缩老对话
+│   └── storage.py            # 会话 JSON 持久化
+└── sessions/                 # 运行时生成，已 .gitignore
+    └── session.json          # 当前会话快照
 ```
 
 ### 更新日志
@@ -76,6 +81,7 @@ ecom-service-agent/
 | 期数 | 主题 | Tag | 日期 |
 |------|------|-----|------|
 | 第 1 期 | 项目框架 + 纯 Prompt 客服 + 结构化输出 | v1-prompt-and-structured-output | 2025-04-14 |
+| 第 2 期 | 多轮对话管理：Summary 压缩 + JSON 持久化 | v2-conversation-management | 2026-04-18 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
 

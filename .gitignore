@@ -26,3 +26,6 @@ Thumbs.db
 venv/
 .venv/
 env/
+
+# 会话持久化文件
+sessions/

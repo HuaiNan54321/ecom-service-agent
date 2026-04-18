@@ -24,10 +24,14 @@ def main():
 
     agent = EcomAgent()
 
+    if agent.history_size > 0:
+        print(f"💬 已恢复上次对话（{agent.history_size} 条历史）\n")
+
     while True:
         try:
             user_input = input("👤 你: ").strip()
         except (EOFError, KeyboardInterrupt):
+            agent.save()
             print("\n再见，欢迎下次光临！")
             break
 
@@ -35,6 +39,7 @@ def main():
             continue
 
         if user_input.lower() in ("quit", "exit"):
+            agent.save()
             print("再见，欢迎下次光临！")
             break
 
