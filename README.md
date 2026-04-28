@@ -64,14 +64,21 @@ ecom-service-agent/
 ├── config/
 │   └── settings.py           # 配置管理（从 .env 读取）
 ├── prompts/
-│   ├── customer_service.py   # 电商客服 system prompt
+│   ├── customer_service.py   # 电商客服 system prompt（含工具使用指南）
 │   └── summarizer.py         # 历史摘要 prompt
 ├── schemas/
 │   └── response.py           # 结构化输出 schema（Pydantic）
 ├── agent/
-│   ├── chat.py               # 核心对话逻辑（含压缩触发）
-│   ├── summarizer.py         # LLM 自我压缩老对话
+│   ├── chat.py               # 核心 ReAct 循环（推理→工具调用→观察→重复）
+│   ├── summarizer.py         # LLM 自我压缩老对话（支持工具消息）
 │   └── storage.py            # 会话 JSON 持久化
+├── tools/                    # 电商工具集（Function Calling）
+│   ├── mock_data.py          # Mock 数据：订单、商品、物流
+│   ├── registry.py           # 工具注册表 + OpenAI schema + 分发执行
+│   ├── order.py              # 查询订单详情
+│   ├── product.py            # 搜索商品信息
+│   ├── logistics.py          # 查询物流轨迹
+│   └── refund.py             # 申请退款
 └── sessions/                 # 运行时生成，已 .gitignore
     └── session.json          # 当前会话快照
 ```
@@ -82,6 +89,7 @@ ecom-service-agent/
 |------|------|-----|------|
 | 第 1 期 | 项目框架 + 纯 Prompt 客服 + 结构化输出 | v1-prompt-and-structured-output | 2025-04-14 |
 | 第 2 期 | 多轮对话管理：Summary 压缩 + JSON 持久化 | v2-conversation-management | 2026-04-18 |
+| 第 3 期 | ReAct Agent + 工具调用 (Function Calling) | v3-react-and-function-calling | 2026-04-27 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
 

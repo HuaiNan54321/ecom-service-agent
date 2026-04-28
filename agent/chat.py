@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 
 from openai import OpenAI
@@ -7,10 +8,11 @@ from agent.summarizer import summarize
 from config.settings import settings
 from prompts.customer_service import SYSTEM_PROMPT
 from schemas.response import CustomerServiceResponse
+from tools import TOOL_DEFINITIONS, execute_tool
 
 
 class EcomAgent:
-    """电商客服 Agent —— 第二期：多轮对话管理（summary 压缩 + JSON 持久化）"""
+    """电商客服 Agent —— 第三期：ReAct Agent + Function Calling"""
 
     def __init__(self, session_path: Optional[str] = None):
         self.client = OpenAI(
@@ -22,10 +24,9 @@ class EcomAgent:
         self.session_path = session_path or settings.session_path
         self.history_threshold = settings.history_threshold
         self.history_keep_recent = settings.history_keep_recent
+        self.max_react_steps = settings.max_react_steps
 
-        # 原始对话条目（user/assistant），也是落盘的内容
         self.raw_messages: list[dict] = []
-        # 累积的摘要文本（超过阈值时触发压缩更新）
         self.summary: Optional[str] = None
 
         loaded = load_session(self.session_path)
@@ -35,45 +36,114 @@ class EcomAgent:
 
     @property
     def history_size(self) -> int:
-        """原始对话条数（不含 system / summary），供 CLI 打印恢复提示用"""
         return len(self.raw_messages)
 
     def chat(self, user_input: str) -> CustomerServiceResponse:
-        """处理用户输入，返回结构化的客服回复"""
+        """处理用户输入：ReAct 循环 → 结构化提取 → 返回结果"""
         self.raw_messages.append({"role": "user", "content": user_input})
 
-        response = self.client.beta.chat.completions.parse(
-            model=self.model,
-            messages=self._build_messages(),
-            temperature=self.temperature,
-            response_format=CustomerServiceResponse,
-        )
+        final_text = self._react_loop()
 
-        result = response.choices[0].message
+        result = self._extract_structured_response(final_text)
+
         self.raw_messages.append(
-            {"role": "assistant", "content": result.content}
+            {"role": "assistant", "content": result.model_dump_json(ensure_ascii=False)}
         )
 
         if len(self.raw_messages) > self.history_threshold:
             self._compress_history()
 
-        # 每轮落盘，进程挂了也能接上
         save_session(self.session_path, self.raw_messages, self.summary)
-
-        return result.parsed
+        return result
 
     def reset(self):
-        """重置对话历史，并删除持久化文件"""
         self.raw_messages = []
         self.summary = None
         delete_session(self.session_path)
 
     def save(self) -> None:
-        """显式保存（退出时兜底调用）"""
         save_session(self.session_path, self.raw_messages, self.summary)
 
+    def _react_loop(self) -> str:
+        """ReAct 循环：调用 LLM → 执行工具 → 观察结果 → 重复，直到模型给出最终回答。"""
+        for step in range(self.max_react_steps):
+            messages = self._build_messages()
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+                tools=TOOL_DEFINITIONS,
+            )
+            choice = response.choices[0]
+            assistant_msg = choice.message
+
+            if assistant_msg.content:
+                self._print_thought(assistant_msg.content)
+
+            if not assistant_msg.tool_calls:
+                content = assistant_msg.content or ""
+                self.raw_messages.append({"role": "assistant", "content": content})
+                return content
+
+            msg_dict = {"role": "assistant", "content": assistant_msg.content}
+            msg_dict["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    },
+                }
+                for tc in assistant_msg.tool_calls
+            ]
+            self.raw_messages.append(msg_dict)
+
+            for tc in assistant_msg.tool_calls:
+                func_name = tc.function.name
+                func_args = json.loads(tc.function.arguments)
+
+                self._print_action(func_name, func_args)
+                result_str = execute_tool(func_name, func_args)
+                self._print_observation(result_str)
+
+                self.raw_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result_str,
+                })
+
+        messages = self._build_messages()
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=self.temperature,
+        )
+        content = response.choices[0].message.content or ""
+        self.raw_messages.append({"role": "assistant", "content": content})
+        return content
+
+    def _extract_structured_response(self, text: str) -> CustomerServiceResponse:
+        """从最终文本中提取结构化元数据（意图、置信度等）。"""
+        response = self.client.beta.chat.completions.parse(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "基于以下客服回复内容，提取结构化信息。"
+                        "reply 字段直接使用原文，不要修改或缩减。"
+                    ),
+                },
+                {"role": "user", "content": text},
+            ],
+            temperature=0.0,
+            response_format=CustomerServiceResponse,
+        )
+        return response.choices[0].message.parsed
+
     def _build_messages(self) -> list[dict]:
-        """拼装发给 LLM 的完整消息列表：system prompt + (summary system) + 原始历史"""
         messages: list[dict] = [
             {"role": "system", "content": SYSTEM_PROMPT}
         ]
@@ -88,7 +158,6 @@ class EcomAgent:
         return messages
 
     def _compress_history(self) -> None:
-        """把最近 K 条以前的消息压缩成新的累积式 summary，截断 raw_messages"""
         keep = self.history_keep_recent
         old_messages = self.raw_messages[:-keep]
         recent = self.raw_messages[-keep:]
@@ -105,3 +174,14 @@ class EcomAgent:
             f"\n💾 [已压缩 {len(old_messages)} 条老消息 → summary "
             f"({len(new_summary)} 字)]\n"
         )
+
+    def _print_thought(self, text: str) -> None:
+        print(f"\n💭 [思考] {text}")
+
+    def _print_action(self, func_name: str, func_args: dict) -> None:
+        args_str = ", ".join(f"{k}={v!r}" for k, v in func_args.items())
+        print(f"🔧 [调用工具] {func_name}({args_str})")
+
+    def _print_observation(self, result: str) -> None:
+        display = result if len(result) <= 300 else result[:300] + "..."
+        print(f"📋 [工具结果] {display}")

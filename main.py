@@ -17,7 +17,8 @@ INTENT_LABELS = {
 
 def main():
     print("=" * 50)
-    print("  并夕夕 · 智能客服「小夕」")
+    print("  并夕夕 · 智能客服「小夕」(ReAct Agent)")
+    print("  支持工具调用：查订单/商品/物流/退款")
     print("  输入 quit 或 exit 退出，输入 reset 重置对话")
     print("=" * 50)
     print()

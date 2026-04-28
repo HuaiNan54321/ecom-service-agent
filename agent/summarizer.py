@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 
 from openai import OpenAI
@@ -13,8 +14,7 @@ def summarize(
 ) -> str:
     """把老对话（可选地带上上一次 summary）压缩成新的 summary 文本。
 
-    注意：使用 chat.completions.create 而不是 beta.chat.completions.parse，
-    避免被 CustomerServiceResponse 的结构化 schema 约束。
+    支持 user / assistant / tool 以及含 tool_calls 的 assistant 消息。
     """
     parts: list[str] = []
     if prev_summary:
@@ -24,10 +24,23 @@ def summarize(
     for msg in old_messages:
         role = msg.get("role")
         content = msg.get("content") or ""
+
         if role == "user":
             transcript_lines.append(f"用户：{content}")
         elif role == "assistant":
-            transcript_lines.append(f"客服：{content}")
+            tool_calls = msg.get("tool_calls")
+            if tool_calls:
+                for tc in tool_calls:
+                    func = tc.get("function", {})
+                    name = func.get("name", "?")
+                    args = func.get("arguments", "{}")
+                    transcript_lines.append(f"客服：[调用工具 {name}({args})]")
+            if content:
+                transcript_lines.append(f"客服：{content}")
+        elif role == "tool":
+            display = content if len(content) <= 200 else content[:200] + "..."
+            transcript_lines.append(f"[工具结果] {display}")
+
     parts.append("【待压缩对话】\n" + "\n".join(transcript_lines))
 
     user_content = "\n\n".join(parts)

@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     model_name: str = "gpt-4o-mini"
     temperature: float = 0.7
 
+    # ReAct 循环
+    max_react_steps: int = 5
+
     # 多轮对话管理
     session_path: str = "sessions/session.json"
     history_threshold: int = 10  # 消息压缩策略通常为上下文达到一定的token数，例如claude code通常为达到最大上下文窗口的70%左右，此处简略为原始消息条数超过10轮
