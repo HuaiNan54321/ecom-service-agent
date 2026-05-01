@@ -17,7 +17,7 @@ INTENT_LABELS = {
 
 def main():
     print("=" * 50)
-    print("  并夕夕 · 智能客服「小夕」(ReAct Agent)")
+    print("  并夕夕 · 智能客服「小夕」(ReAct Agent + MCP)")
     print("  支持工具调用：查订单/商品/物流/退款")
     print("  输入 quit 或 exit 退出，输入 reset 重置对话")
     print("=" * 50)
@@ -33,6 +33,7 @@ def main():
             user_input = input("👤 你: ").strip()
         except (EOFError, KeyboardInterrupt):
             agent.save()
+            agent.close()
             print("\n再见，欢迎下次光临！")
             break
 
@@ -41,6 +42,7 @@ def main():
 
         if user_input.lower() in ("quit", "exit"):
             agent.save()
+            agent.close()
             print("再见，欢迎下次光临！")
             break
 

@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     # ReAct 循环
     max_react_steps: int = 5
 
+    # MCP 配置
+    mcp_enabled: bool = False
+    mcp_server_url: str = "http://127.0.0.1:9123/mcp"
+
     # 多轮对话管理
     session_path: str = "sessions/session.json"
     history_threshold: int = 10  # 消息压缩策略通常为上下文达到一定的token数，例如claude code通常为达到最大上下文窗口的70%左右，此处简略为原始消息条数超过10轮

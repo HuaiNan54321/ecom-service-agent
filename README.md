@@ -62,23 +62,29 @@ ecom-service-agent/
 ├── requirements.txt          # Python 依赖
 ├── .env.example              # 环境变量示例
 ├── config/
-│   └── settings.py           # 配置管理（从 .env 读取）
+│   └── settings.py           # 配置管理（从 .env 读取，含 MCP 开关）
 ├── prompts/
 │   ├── customer_service.py   # 电商客服 system prompt（含工具使用指南）
 │   └── summarizer.py         # 历史摘要 prompt
 ├── schemas/
 │   └── response.py           # 结构化输出 schema（Pydantic）
 ├── agent/
-│   ├── chat.py               # 核心 ReAct 循环（推理→工具调用→观察→重复）
+│   ├── chat.py               # 核心 ReAct 循环（通过 ToolManager 调用工具）
 │   ├── summarizer.py         # LLM 自我压缩老对话（支持工具消息）
 │   └── storage.py            # 会话 JSON 持久化
 ├── tools/                    # 电商工具集（Function Calling）
 │   ├── mock_data.py          # Mock 数据：订单、商品、物流
-│   ├── registry.py           # 工具注册表 + OpenAI schema + 分发执行
+│   ├── registry.py           # 本地工具注册表 + OpenAI schema + 分发执行
+│   ├── manager.py            # ToolManager：统一管理本地工具 + MCP 工具
 │   ├── order.py              # 查询订单详情
 │   ├── product.py            # 搜索商品信息
 │   ├── logistics.py          # 查询物流轨迹
 │   └── refund.py             # 申请退款
+├── mcp_server/               # MCP Server（独立微服务）
+│   └── server.py             # FastMCP + Streamable HTTP，暴露 4 个电商工具
+├── mcp_client/               # MCP Client（同步封装）
+│   ├── client.py             # MCPClient：同步封装，后台线程管理异步连接
+│   └── converter.py          # MCP Tool schema → OpenAI function calling 格式转换
 └── sessions/                 # 运行时生成，已 .gitignore
     └── session.json          # 当前会话快照
 ```
@@ -90,6 +96,7 @@ ecom-service-agent/
 | 第 1 期 | 项目框架 + 纯 Prompt 客服 + 结构化输出 | v1-prompt-and-structured-output | 2025-04-14 |
 | 第 2 期 | 多轮对话管理：Summary 压缩 + JSON 持久化 | v2-conversation-management | 2026-04-18 |
 | 第 3 期 | ReAct Agent + 工具调用 (Function Calling) | v3-react-and-function-calling | 2026-04-27 |
+| 第 4 期 | MCP 集成 (Streamable HTTP) | v4-mcp-integration | 2026-05-01 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
 

@@ -8,11 +8,11 @@ from agent.summarizer import summarize
 from config.settings import settings
 from prompts.customer_service import SYSTEM_PROMPT
 from schemas.response import CustomerServiceResponse
-from tools import TOOL_DEFINITIONS, execute_tool
+from tools.manager import ToolManager
 
 
 class EcomAgent:
-    """电商客服 Agent —— 第三期：ReAct Agent + Function Calling"""
+    """电商客服 Agent —— 第四期：MCP (Model Context Protocol) 集成"""
 
     def __init__(self, session_path: Optional[str] = None):
         self.client = OpenAI(
@@ -25,6 +25,11 @@ class EcomAgent:
         self.history_threshold = settings.history_threshold
         self.history_keep_recent = settings.history_keep_recent
         self.max_react_steps = settings.max_react_steps
+
+        self.tool_manager = ToolManager(
+            use_mcp=settings.mcp_enabled,
+            mcp_server_url=settings.mcp_server_url,
+        )
 
         self.raw_messages: list[dict] = []
         self.summary: Optional[str] = None
@@ -64,6 +69,9 @@ class EcomAgent:
     def save(self) -> None:
         save_session(self.session_path, self.raw_messages, self.summary)
 
+    def close(self):
+        self.tool_manager.close()
+
     def _react_loop(self) -> str:
         """ReAct 循环：调用 LLM → 执行工具 → 观察结果 → 重复，直到模型给出最终回答。"""
         for step in range(self.max_react_steps):
@@ -73,7 +81,7 @@ class EcomAgent:
                 model=self.model,
                 messages=messages,
                 temperature=self.temperature,
-                tools=TOOL_DEFINITIONS,
+                tools=self.tool_manager.tool_definitions,
             )
             choice = response.choices[0]
             assistant_msg = choice.message
@@ -105,7 +113,7 @@ class EcomAgent:
                 func_args = json.loads(tc.function.arguments)
 
                 self._print_action(func_name, func_args)
-                result_str = execute_tool(func_name, func_args)
+                result_str = self.tool_manager.execute_tool(func_name, func_args)
                 self._print_observation(result_str)
 
                 self.raw_messages.append({
