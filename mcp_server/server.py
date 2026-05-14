@@ -17,6 +17,7 @@ from tools.order import query_order as _query_order
 from tools.product import query_product as _query_product
 from tools.logistics import query_logistics as _query_logistics
 from tools.refund import apply_refund as _apply_refund
+from tools.knowledge import search_knowledge as _search_knowledge
 
 mcp = FastMCP("ecom-tools", host="127.0.0.1", port=9123)
 
@@ -46,6 +47,16 @@ def query_logistics(order_id: str) -> str:
 def apply_refund(order_id: str, reason: str) -> str:
     """为指定订单申请退款。注意：这是一个敏感操作，调用前应先与用户确认"""
     result = _apply_refund(order_id, reason)
+    return json.dumps(result, ensure_ascii=False)
+
+
+@mcp.tool()
+def search_knowledge(query: str, top_k: int = 3) -> str:
+    """检索并夕夕的政策与帮助文档（退换货政策、配送说明、会员权益、FAQ）。
+    当顾客询问规则、流程、时效、是否支持等政策类问题时使用。
+    返回 Top-K 命中片段及来源文档，请基于检索结果回答，不要编造政策。
+    """
+    result = _search_knowledge(query, top_k=top_k)
     return json.dumps(result, ensure_ascii=False)
 
 

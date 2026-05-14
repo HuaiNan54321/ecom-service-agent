@@ -7,12 +7,14 @@ from tools.order import query_order
 from tools.product import query_product
 from tools.logistics import query_logistics
 from tools.refund import apply_refund
+from tools.knowledge import search_knowledge
 
 _TOOL_MAP: dict[str, Callable] = {
     "query_order": query_order,
     "query_product": query_product,
     "query_logistics": query_logistics,
     "apply_refund": apply_refund,
+    "search_knowledge": search_knowledge,
 }
 
 TOOL_DEFINITIONS: list[dict] = [
@@ -64,6 +66,33 @@ TOOL_DEFINITIONS: list[dict] = [
                     }
                 },
                 "required": ["order_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_knowledge",
+            "description": (
+                "检索并夕夕的政策与帮助文档（退换货政策、配送说明、会员权益、常见问题 FAQ）。"
+                "当顾客询问规则、流程、时效、是否支持等政策类问题时使用，"
+                "比如「能退货吗」「多久到账」「钻石会员有什么权益」「偏远地区包邮吗」。"
+                "返回 Top-K 命中片段及来源文档，请基于检索结果回答，不要编造政策"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "用顾客的原问题或一句简洁中文描述要查的政策点",
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "description": "返回片段数，默认 3，最大 5",
+                        "default": 3,
+                    },
+                },
+                "required": ["query"],
             },
         },
     },

@@ -62,7 +62,7 @@ ecom-service-agent/
 ├── requirements.txt          # Python 依赖
 ├── .env.example              # 环境变量示例
 ├── config/
-│   └── settings.py           # 配置管理（从 .env 读取，含 MCP 开关）
+│   └── settings.py           # 配置管理（从 .env 读取，含 MCP / RAG 开关）
 ├── prompts/
 │   ├── customer_service.py   # 电商客服 system prompt（含工具使用指南）
 │   └── summarizer.py         # 历史摘要 prompt
@@ -79,14 +79,32 @@ ecom-service-agent/
 │   ├── order.py              # 查询订单详情
 │   ├── product.py            # 搜索商品信息
 │   ├── logistics.py          # 查询物流轨迹
-│   └── refund.py             # 申请退款
+│   ├── refund.py             # 申请退款
+│   └── knowledge.py          # search_knowledge：RAG 政策/FAQ 检索
 ├── mcp_server/               # MCP Server（独立微服务）
-│   └── server.py             # FastMCP + Streamable HTTP，暴露 4 个电商工具
+│   └── server.py             # FastMCP + Streamable HTTP，暴露 5 个电商工具
 ├── mcp_client/               # MCP Client（同步封装）
 │   ├── client.py             # MCPClient：同步封装，后台线程管理异步连接
 │   └── converter.py          # MCP Tool schema → OpenAI function calling 格式转换
+├── knowledge/                # 知识库源文档（markdown）
+│   ├── 退换货政策.md
+│   ├── 配送说明.md
+│   ├── 会员权益.md
+│   └── 常见问题FAQ.md
+├── rag/                      # RAG 模块（第5期）
+│   ├── chunker.py            # Markdown → Chunk（按二级标题切分）
+│   ├── embedder.py           # OpenAI Embeddings 封装
+│   ├── retriever.py          # KnowledgeRetriever：query → 向量 → backend.search
+│   └── backends/             # 向量后端（可切换）
+│       ├── base.py           # VectorBackend 抽象接口
+│       ├── numpy_backend.py  # 手写余弦 + JSON（教学透明，零依赖）
+│       └── chroma_backend.py # Chroma 嵌入式向量数据库（生产代表）
+├── scripts/
+│   └── build_kb_index.py     # 离线构建知识库索引（--backend numpy/chroma）
 └── sessions/                 # 运行时生成，已 .gitignore
-    └── session.json          # 当前会话快照
+    ├── session.json          # 当前会话快照
+    ├── kb_index.json         # NumpyBackend 索引（chunks + 向量）
+    └── chroma/               # ChromaBackend 持久化目录
 ```
 
 ### 更新日志
@@ -97,6 +115,7 @@ ecom-service-agent/
 | 第 2 期 | 多轮对话管理：Summary 压缩 + JSON 持久化 | v2-conversation-management | 2026-04-18 |
 | 第 3 期 | ReAct Agent + 工具调用 (Function Calling) | v3-react-and-function-calling | 2026-04-27 |
 | 第 4 期 | MCP 集成 (Streamable HTTP) | v4-mcp-integration | 2026-05-01 |
+| 第 5 期 | RAG 检索增强生成（FAQ + 政策知识库） | v5-rag | 2026-05-13 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
 
