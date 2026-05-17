@@ -11,7 +11,7 @@ import threading
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-from mcp_client.converter import mcp_tools_to_openai
+from app.mcp_client.converter import mcp_tools_to_openai
 
 
 class MCPClient:

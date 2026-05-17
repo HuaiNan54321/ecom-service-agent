@@ -3,11 +3,12 @@
 import json
 from typing import Callable
 
-from tools.order import query_order
-from tools.product import query_product
-from tools.logistics import query_logistics
-from tools.refund import apply_refund
-from tools.knowledge import search_knowledge
+from app.tools.order import query_order
+from app.tools.product import query_product
+from app.tools.logistics import query_logistics
+from app.tools.refund import apply_refund
+from app.tools.knowledge import search_knowledge
+from app.tools.user_orders import list_user_orders
 
 _TOOL_MAP: dict[str, Callable] = {
     "query_order": query_order,
@@ -15,6 +16,7 @@ _TOOL_MAP: dict[str, Callable] = {
     "query_logistics": query_logistics,
     "apply_refund": apply_refund,
     "search_knowledge": search_knowledge,
+    "list_user_orders": list_user_orders,
 }
 
 TOOL_DEFINITIONS: list[dict] = [
@@ -93,6 +95,22 @@ TOOL_DEFINITIONS: list[dict] = [
                     },
                 },
                 "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_user_orders",
+            "description": (
+                "查询当前用户的所有订单概要列表（订单号、状态、商品、金额、下单时间）。"
+                "当用户想查订单但未提供订单号，或提供的订单号查不到时，"
+                "调用此工具列出订单供用户确认"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
             },
         },
     },

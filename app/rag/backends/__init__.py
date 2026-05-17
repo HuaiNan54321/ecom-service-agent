@@ -7,8 +7,8 @@
 通过 settings.rag_backend 选择，对上层 KnowledgeRetriever / search_knowledge 透明。
 """
 
-from rag.backends.base import RetrievedChunk, VectorBackend
-from rag.backends.numpy_backend import NumpyBackend
+from app.rag.backends.base import RetrievedChunk, VectorBackend
+from app.rag.backends.numpy_backend import NumpyBackend
 
 __all__ = ["RetrievedChunk", "VectorBackend", "NumpyBackend", "create_backend"]
 
@@ -23,7 +23,7 @@ def create_backend(name: str, **kwargs) -> VectorBackend:
     if name == "numpy":
         return NumpyBackend(index_path=kwargs["index_path"])
     if name == "chroma":
-        from rag.backends.chroma_backend import ChromaBackend
+        from app.rag.backends.chroma_backend import ChromaBackend
 
         return ChromaBackend(
             persist_dir=kwargs["persist_dir"],

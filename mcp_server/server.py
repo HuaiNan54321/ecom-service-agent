@@ -13,11 +13,11 @@ sys.path.insert(0, str(ROOT))
 
 from mcp.server.fastmcp import FastMCP
 
-from tools.order import query_order as _query_order
-from tools.product import query_product as _query_product
-from tools.logistics import query_logistics as _query_logistics
-from tools.refund import apply_refund as _apply_refund
-from tools.knowledge import search_knowledge as _search_knowledge
+from app.tools.order import query_order as _query_order
+from app.tools.product import query_product as _query_product
+from app.tools.logistics import query_logistics as _query_logistics
+from app.tools.refund import apply_refund as _apply_refund
+from app.tools.knowledge import search_knowledge as _search_knowledge
 
 mcp = FastMCP("ecom-tools", host="127.0.0.1", port=9123)
 

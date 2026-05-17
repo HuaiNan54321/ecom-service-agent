@@ -3,12 +3,12 @@ from typing import Optional
 
 from openai import OpenAI
 
-from agent.storage import delete_session, load_session, save_session
-from agent.summarizer import summarize
-from config.settings import settings
-from prompts.customer_service import SYSTEM_PROMPT
-from schemas.response import CustomerServiceResponse
-from tools.manager import ToolManager
+from app.agent.storage import delete_session, load_session, save_session
+from app.agent.summarizer import summarize
+from app.config.settings import settings
+from app.prompts.customer_service import SYSTEM_PROMPT
+from app.schemas.response import CustomerServiceResponse
+from app.tools.manager import ToolManager
 
 
 class EcomAgent:
@@ -167,8 +167,13 @@ class EcomAgent:
 
     def _compress_history(self) -> None:
         keep = self.history_keep_recent
-        old_messages = self.raw_messages[:-keep]
-        recent = self.raw_messages[-keep:]
+        split = len(self.raw_messages) - keep
+        while split > 0 and self.raw_messages[split].get("role") in ("tool",):
+            split -= 1
+        if split <= 0:
+            return
+        old_messages = self.raw_messages[:split]
+        recent = self.raw_messages[split:]
 
         new_summary = summarize(
             client=self.client,

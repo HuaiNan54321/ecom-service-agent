@@ -3,7 +3,7 @@ from typing import Optional
 
 from openai import OpenAI
 
-from prompts.summarizer import SUMMARY_PROMPT
+from app.prompts.summarizer import SUMMARY_PROMPT
 
 
 def summarize(

@@ -1,4 +1,4 @@
-from tools.mock_data import PRODUCTS
+from app.tools.mock_data import PRODUCTS
 
 
 def query_product(keyword: str) -> dict:

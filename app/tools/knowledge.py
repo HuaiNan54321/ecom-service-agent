@@ -14,10 +14,10 @@ search_knowledge 面向非结构化文本（退换货政策、配送说明、FAQ
 from pathlib import Path
 from typing import Optional
 
-from config.settings import settings
-from rag.backends import create_backend
-from rag.embedder import Embedder
-from rag.retriever import KnowledgeRetriever
+from app.config.settings import settings
+from app.rag.backends import create_backend
+from app.rag.embedder import Embedder
+from app.rag.retriever import KnowledgeRetriever
 
 _retriever: Optional[KnowledgeRetriever] = None
 

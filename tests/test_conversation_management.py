@@ -6,22 +6,22 @@
 3. Reset：清空内存 + 删除文件
 4. 损坏 JSON：降级为新会话不崩溃
 
-用法：python3 scripts/test_conversation_management.py
+用法：python3 tests/test_conversation_management.py
 """
 
 import json
 import sys
 from pathlib import Path
 
-# 把项目根加入 sys.path，允许从 scripts/ 下直接运行
+# 把项目根加入 sys.path，允许从 tests/ 下直接运行
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from agent.chat import EcomAgent  # noqa: E402
-from agent.storage import load_session  # noqa: E402
+from app.agent.chat import EcomAgent  # noqa: E402
+from app.agent.storage import load_session  # noqa: E402
 
 
-TEST_SESSION = str(ROOT / "sessions" / "test_session.json")
+TEST_SESSION = str(ROOT / "app" / "sessions" / "test_session.json")
 
 
 def _fresh_agent(threshold: int = 20, keep: int = 6) -> EcomAgent:

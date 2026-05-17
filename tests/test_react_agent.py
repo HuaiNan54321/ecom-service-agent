@@ -10,7 +10,7 @@
 7. 结构化输出完整性（每次回复都有意图/置信度）
 8. 会话持久化兼容（工具消息也能正确保存和恢复）
 
-用法：python3 scripts/test_react_agent.py
+用法：python3 tests/test_react_agent.py
 """
 
 import sys
@@ -19,10 +19,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from agent.chat import EcomAgent  # noqa: E402
-from schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
+from app.agent.chat import EcomAgent  # noqa: E402
+from app.schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
 
-TEST_SESSION = str(ROOT / "sessions" / "test_react_session.json")
+TEST_SESSION = str(ROOT / "app" / "sessions" / "test_react_session.json")
 
 
 def _fresh_agent(threshold: int = 30, keep: int = 6) -> EcomAgent:

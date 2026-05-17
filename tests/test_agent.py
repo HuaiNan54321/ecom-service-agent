@@ -14,8 +14,8 @@ from pathlib import Path
 # 确保项目根目录在 sys.path 中
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agent.chat import EcomAgent
-from schemas.response import CustomerServiceResponse, IntentType
+from app.agent.chat import EcomAgent
+from app.schemas.response import CustomerServiceResponse, IntentType
 
 # 测试用例：(用户输入, 期望的意图类型列表)
 TEST_CASES = [

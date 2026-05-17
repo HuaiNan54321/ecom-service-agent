@@ -10,9 +10,9 @@
 前提：已配置 OPENAI_API_KEY；chroma 后端需要 `pip install chromadb`。
 
 用法：
-  python scripts/test_rag.py                # 跑两套后端
-  python scripts/test_rag.py --backend numpy
-  python scripts/test_rag.py --backend chroma
+  python tests/test_rag.py                # 跑两套后端
+  python tests/test_rag.py --backend numpy
+  python tests/test_rag.py --backend chroma
 """
 
 import argparse
@@ -23,16 +23,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from agent.chat import EcomAgent  # noqa: E402
-from config.settings import settings  # noqa: E402
-from rag.backends import create_backend  # noqa: E402
-from rag.chunker import chunk_markdown_dir  # noqa: E402
-from rag.embedder import Embedder  # noqa: E402
-from rag.retriever import KnowledgeRetriever  # noqa: E402
-from schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
-from tools import knowledge as knowledge_tool  # noqa: E402
+from app.agent.chat import EcomAgent  # noqa: E402
+from app.config.settings import settings  # noqa: E402
+from app.rag.backends import create_backend  # noqa: E402
+from app.rag.chunker import chunk_markdown_dir  # noqa: E402
+from app.rag.embedder import Embedder  # noqa: E402
+from app.rag.retriever import KnowledgeRetriever  # noqa: E402
+from app.schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
+from app.tools import knowledge as knowledge_tool  # noqa: E402
 
-TEST_SESSION = str(ROOT / "sessions" / "test_rag_session.json")
+TEST_SESSION = str(ROOT / "app" / "sessions" / "test_rag_session.json")
 EXPECTED_DOCS = {"退换货政策", "配送说明", "会员权益", "常见问题FAQ"}
 
 

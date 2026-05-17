@@ -2,11 +2,11 @@
 
 用法：
   # 默认走 settings.rag_backend
-  python scripts/build_kb_index.py
+  python app/scripts/build_kb_index.py
 
   # 显式指定后端，便于一份知识库同时构建两种后端的索引做对比
-  python scripts/build_kb_index.py --backend numpy
-  python scripts/build_kb_index.py --backend chroma
+  python app/scripts/build_kb_index.py --backend numpy
+  python app/scripts/build_kb_index.py --backend chroma
 
 流程：
   1. 扫描 knowledge/ 下的所有 .md 文件，按二级标题切分。
@@ -18,13 +18,13 @@ import argparse
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
-from config.settings import settings  # noqa: E402
-from rag.backends import create_backend  # noqa: E402
-from rag.chunker import chunk_markdown_dir  # noqa: E402
-from rag.embedder import Embedder  # noqa: E402
+from app.config.settings import settings  # noqa: E402
+from app.rag.backends import create_backend  # noqa: E402
+from app.rag.chunker import chunk_markdown_dir  # noqa: E402
+from app.rag.embedder import Embedder  # noqa: E402
 
 
 def _build_backend(name: str):

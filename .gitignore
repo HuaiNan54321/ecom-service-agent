@@ -28,4 +28,4 @@ venv/
 env/
 
 # 会话持久化文件
-sessions/
+app/sessions/

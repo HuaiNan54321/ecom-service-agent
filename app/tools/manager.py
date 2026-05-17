@@ -6,8 +6,8 @@
 
 import json
 
-from tools.registry import TOOL_DEFINITIONS as LOCAL_TOOL_DEFINITIONS
-from tools.registry import execute_tool as local_execute_tool
+from app.tools.registry import TOOL_DEFINITIONS as LOCAL_TOOL_DEFINITIONS
+from app.tools.registry import execute_tool as local_execute_tool
 
 
 class ToolManager:
@@ -31,7 +31,7 @@ class ToolManager:
 
     def _init_mcp(self, server_url: str):
         """连接 MCP Server 加载工具；失败时降级到本地工具。"""
-        from mcp_client import MCPClient
+        from app.mcp_client import MCPClient
 
         try:
             self._mcp_client = MCPClient(server_url)

@@ -1,7 +1,7 @@
 """端到端测试：验证第 4 期 MCP (Model Context Protocol) 集成。
 
 前提条件：需先在另一个终端启动 MCP Server
-  python mcp_server/server.py
+  python -m mcp_server.server
 
 测试场景：
 1. MCP Client 连接与工具发现
@@ -14,7 +14,7 @@
 
 用法：
   1. 启动 MCP Server: python mcp_server/server.py
-  2. 运行测试: python scripts/test_mcp.py
+  2. 运行测试: python tests/test_mcp.py
 """
 
 import sys
@@ -23,13 +23,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from mcp_client import MCPClient  # noqa: E402
-from tools.manager import ToolManager  # noqa: E402
-from agent.chat import EcomAgent  # noqa: E402
-from schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
+from app.mcp_client import MCPClient  # noqa: E402
+from app.tools.manager import ToolManager  # noqa: E402
+from app.agent.chat import EcomAgent  # noqa: E402
+from app.schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
 
 MCP_URL = "http://127.0.0.1:9123/mcp"
-TEST_SESSION = str(ROOT / "sessions" / "test_mcp_session.json")
+TEST_SESSION = str(ROOT / "app" / "sessions" / "test_mcp_session.json")
 
 EXPECTED_TOOLS = {"query_order", "query_product", "query_logistics", "apply_refund"}
 

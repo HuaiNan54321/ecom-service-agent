@@ -17,8 +17,8 @@ import json
 import math
 from pathlib import Path
 
-from rag.backends.base import RetrievedChunk, VectorBackend
-from rag.chunker import Chunk
+from app.rag.backends.base import RetrievedChunk, VectorBackend
+from app.rag.chunker import Chunk
 
 
 class NumpyBackend(VectorBackend):

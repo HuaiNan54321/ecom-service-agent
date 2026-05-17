@@ -1,5 +1,5 @@
-from agent.chat import EcomAgent
-from schemas.response import IntentType
+from app.agent.chat import EcomAgent
+from app.schemas.response import IntentType
 
 # 意图类型的中文映射
 INTENT_LABELS = {

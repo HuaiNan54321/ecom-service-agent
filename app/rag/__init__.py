@@ -4,10 +4,10 @@
 非结构化知识回答问题，而不只依赖工具返回的结构化数据。
 """
 
-from rag.backends import NumpyBackend, RetrievedChunk, VectorBackend, create_backend
-from rag.chunker import Chunk, chunk_markdown_dir
-from rag.embedder import Embedder
-from rag.retriever import KnowledgeRetriever
+from app.rag.backends import NumpyBackend, RetrievedChunk, VectorBackend, create_backend
+from app.rag.chunker import Chunk, chunk_markdown_dir
+from app.rag.embedder import Embedder
+from app.rag.retriever import KnowledgeRetriever
 
 __all__ = [
     "Chunk",

@@ -58,53 +58,68 @@
 
 ```
 ecom-service-agent/
-├── main.py                   # CLI 入口，多轮对话循环（启动恢复 + 退出保存）
-├── requirements.txt          # Python 依赖
-├── .env.example              # 环境变量示例
-├── config/
-│   └── settings.py           # 配置管理（从 .env 读取，含 MCP / RAG 开关）
-├── prompts/
-│   ├── customer_service.py   # 电商客服 system prompt（含工具使用指南）
-│   └── summarizer.py         # 历史摘要 prompt
-├── schemas/
-│   └── response.py           # 结构化输出 schema（Pydantic）
-├── agent/
-│   ├── chat.py               # 核心 ReAct 循环（通过 ToolManager 调用工具）
-│   ├── summarizer.py         # LLM 自我压缩老对话（支持工具消息）
-│   └── storage.py            # 会话 JSON 持久化
-├── tools/                    # 电商工具集（Function Calling）
-│   ├── mock_data.py          # Mock 数据：订单、商品、物流
-│   ├── registry.py           # 本地工具注册表 + OpenAI schema + 分发执行
-│   ├── manager.py            # ToolManager：统一管理本地工具 + MCP 工具
-│   ├── order.py              # 查询订单详情
-│   ├── product.py            # 搜索商品信息
-│   ├── logistics.py          # 查询物流轨迹
-│   ├── refund.py             # 申请退款
-│   └── knowledge.py          # search_knowledge：RAG 政策/FAQ 检索
-├── mcp_server/               # MCP Server（独立微服务）
-│   └── server.py             # FastMCP + Streamable HTTP，暴露 5 个电商工具
-├── mcp_client/               # MCP Client（同步封装）
-│   ├── client.py             # MCPClient：同步封装，后台线程管理异步连接
-│   └── converter.py          # MCP Tool schema → OpenAI function calling 格式转换
-├── knowledge/                # 知识库源文档（markdown）
-│   ├── 退换货政策.md
-│   ├── 配送说明.md
-│   ├── 会员权益.md
-│   └── 常见问题FAQ.md
-├── rag/                      # RAG 模块（第5期）
-│   ├── chunker.py            # Markdown → Chunk（按二级标题切分）
-│   ├── embedder.py           # OpenAI Embeddings 封装
-│   ├── retriever.py          # KnowledgeRetriever：query → 向量 → backend.search
-│   └── backends/             # 向量后端（可切换）
-│       ├── base.py           # VectorBackend 抽象接口
-│       ├── numpy_backend.py  # 手写余弦 + JSON（教学透明，零依赖）
-│       └── chroma_backend.py # Chroma 嵌入式向量数据库（生产代表）
-├── scripts/
-│   └── build_kb_index.py     # 离线构建知识库索引（--backend numpy/chroma）
-└── sessions/                 # 运行时生成，已 .gitignore
-    ├── session.json          # 当前会话快照
-    ├── kb_index.json         # NumpyBackend 索引（chunks + 向量）
-    └── chroma/               # ChromaBackend 持久化目录
+├── main.py                        # CLI 入口，多轮对话循环
+├── requirements.txt
+├── .env.example
+│
+├── app/                           # 主 Bot 全部代码 + 数据
+│   ├── config/
+│   │   └── settings.py            # 配置管理（从 .env 读取，含 MCP / RAG 开关）
+│   ├── prompts/
+│   │   ├── customer_service.py    # 电商客服 system prompt（含工具使用指南）
+│   │   └── summarizer.py          # 历史摘要 prompt
+│   ├── schemas/
+│   │   └── response.py            # 结构化输出 schema（Pydantic）
+│   ├── agent/
+│   │   ├── chat.py                # 核心 ReAct 循环（通过 ToolManager 调用工具）
+│   │   ├── summarizer.py          # LLM 自我压缩老对话（支持工具消息）
+│   │   ├── storage.py             # 会话 JSON 持久化
+│   │   ├── strategies/            # (upcoming) Agent 执行策略
+│   │   ├── memory/                # (upcoming) 短期记忆 & 长期记忆
+│   │   └── skills/                # (upcoming) 可复用能力模块
+│   ├── tools/                     # 电商工具集（Function Calling）
+│   │   ├── mock_data.py           # Mock 数据：订单、商品、物流
+│   │   ├── registry.py            # 本地工具注册表 + OpenAI schema + 分发执行
+│   │   ├── manager.py             # ToolManager：统一管理本地工具 + MCP 工具
+│   │   ├── order.py               # 查询订单详情
+│   │   ├── product.py             # 搜索商品信息
+│   │   ├── logistics.py           # 查询物流轨迹
+│   │   ├── refund.py              # 申请退款
+│   │   └── knowledge.py           # search_knowledge：RAG 政策/FAQ 检索
+│   ├── mcp_client/                # MCP Client（同步封装）
+│   │   ├── client.py              # MCPClient：后台线程管理异步连接
+│   │   └── converter.py           # MCP Tool schema → OpenAI function calling 格式
+│   ├── rag/                       # RAG 模块
+│   │   ├── chunker.py             # Markdown → Chunk（按二级标题切分）
+│   │   ├── embedder.py            # OpenAI Embeddings 封装
+│   │   ├── retriever.py           # KnowledgeRetriever：query → 向量检索
+│   │   └── backends/              # 向量后端（可切换）
+│   │       ├── base.py            # VectorBackend 抽象接口
+│   │       ├── numpy_backend.py   # 手写余弦 + JSON（教学透明，零依赖）
+│   │       └── chroma_backend.py  # Chroma 嵌入式向量数据库（生产代表）
+│   ├── evaluation/                # (upcoming) Agent 评估体系
+│   ├── multi_agent/               # (upcoming) 多 Agent 协作
+│   ├── knowledge/                 # 知识库源文档（markdown）
+│   │   ├── 退换货政策.md
+│   │   ├── 配送说明.md
+│   │   ├── 会员权益.md
+│   │   └── 常见问题FAQ.md
+│   ├── scripts/
+│   │   └── build_kb_index.py      # 离线构建知识库索引（--backend numpy/chroma）
+│   └── sessions/                  # 运行时生成，已 .gitignore
+│       ├── session.json           # 当前会话快照
+│       ├── kb_index.json          # NumpyBackend 索引
+│       └── chroma/                # ChromaBackend 持久化目录
+│
+├── mcp_server/                    # MCP Server（独立微服务）
+│   └── server.py                  # FastMCP + Streamable HTTP，暴露电商工具
+│
+└── tests/                         # 全部测试
+    ├── test_agent.py              # 结构化输出 + 多轮 + reset
+    ├── test_conversation_management.py  # 多轮对话管理
+    ├── test_react_agent.py        # ReAct Agent + Function Calling
+    ├── test_mcp.py                # MCP 集成
+    └── test_rag.py                # RAG 知识库检索
 ```
 
 ### 更新日志
@@ -116,6 +131,7 @@ ecom-service-agent/
 | 第 3 期 | ReAct Agent + 工具调用 (Function Calling) | v3-react-and-function-calling | 2026-04-27 |
 | 第 4 期 | MCP 集成 (Streamable HTTP) | v4-mcp-integration | 2026-05-01 |
 | 第 5 期 | RAG 检索增强生成（FAQ + 政策知识库） | v5-rag | 2026-05-13 |
+| 第 6 期 | 架构重构：app/ 分层 + 高级篇目录预留 | v6-restructure | 2026-05-17 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
 
