@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     chroma_persist_dir: str = "app/sessions/chroma"
     chroma_collection: str = "ecom_kb"
 
+    # Multi-Agent 配置（第7期）
+    multi_agent_enabled: bool = False
+
     # 多轮对话管理
     session_path: str = "app/sessions/session.json"
     history_threshold: int = 10  # 消息压缩策略通常为上下文达到一定的token数，例如claude code通常为达到最大上下文窗口的70%左右，此处简略为原始消息条数超过10轮

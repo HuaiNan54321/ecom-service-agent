@@ -1,4 +1,5 @@
 from app.agent.chat import EcomAgent
+from app.config.settings import settings
 from app.schemas.response import IntentType
 
 # 意图类型的中文映射
@@ -16,14 +17,20 @@ INTENT_LABELS = {
 
 
 def main():
+    if settings.multi_agent_enabled:
+        from app.multi_agent.orchestrator import MultiAgentOrchestrator
+        agent = MultiAgentOrchestrator()
+        mode = "Multi-Agent 协作模式"
+    else:
+        agent = EcomAgent()
+        mode = "ReAct + MCP + RAG"
+
     print("=" * 50)
-    print("  并夕夕 · 智能客服「小夕」(ReAct + MCP + RAG)")
+    print(f"  并夕夕 · 智能客服「小夕」({mode})")
     print("  支持工具调用：查订单/商品/物流/退款 + 政策检索")
     print("  输入 quit 或 exit 退出，输入 reset 重置对话")
     print("=" * 50)
     print()
-
-    agent = EcomAgent()
 
     if agent.history_size > 0:
         print(f"💬 已恢复上次对话（{agent.history_size} 条历史）\n")

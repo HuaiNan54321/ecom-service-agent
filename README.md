@@ -38,13 +38,15 @@
 - RAG 检索增强生成（接入商品库、FAQ、退换货政策等）
 
 **高级篇**
-- Plan-and-Execute（先规划再执行，适合复杂多步骤请求）
-- Reflexion 反思机制（自我评估与迭代改进）
-- REWOO（预规划 + 批量执行，高效处理并行任务）
+- Multi-Agent 协作（客服路由、售前售后分流）
 - Memory：短期记忆 & 长期记忆
 - Skill：可复用的能力模块（退货处理、订单跟踪等标准化流程）
-- Multi-Agent 协作（客服路由、售前售后分流）
 - Agent 评估体系
+
+**生产篇**
+- Guardrails 安全护栏（Prompt Injection 检测、输出幻觉校验、敏感信息过滤、意图越界拦截）
+- Human-in-the-Loop 人机协作（置信度评估与自动转人工、Agent↔真人客服交接协议、上下文传递）
+- Agent Observability 可观测性（调用链 Trace、Token/延迟指标采集、工具成功率看板、异常告警）
 
 > 以上为初步规划，实际更新可能会根据大家的反馈进行调整。
 
@@ -58,16 +60,17 @@
 
 ```
 ecom-service-agent/
-├── main.py                        # CLI 入口，多轮对话循环
+├── main.py                        # CLI 入口（支持单 Agent / Multi-Agent 模式切换）
 ├── requirements.txt
 ├── .env.example
 │
 ├── app/                           # 主 Bot 全部代码 + 数据
 │   ├── config/
-│   │   └── settings.py            # 配置管理（从 .env 读取，含 MCP / RAG 开关）
+│   │   └── settings.py            # 配置管理（从 .env 读取，含 MCP / RAG / Multi-Agent 开关）
 │   ├── prompts/
 │   │   ├── customer_service.py    # 电商客服 system prompt（含工具使用指南）
-│   │   └── summarizer.py          # 历史摘要 prompt
+│   │   ├── summarizer.py          # 历史摘要 prompt
+│   │   └── agents.py              # Multi-Agent 子 Agent prompt（售前/售后/投诉 + Router）
 │   ├── schemas/
 │   │   └── response.py            # 结构化输出 schema（Pydantic）
 │   ├── agent/
@@ -80,7 +83,7 @@ ecom-service-agent/
 │   ├── tools/                     # 电商工具集（Function Calling）
 │   │   ├── mock_data.py           # Mock 数据：订单、商品、物流
 │   │   ├── registry.py            # 本地工具注册表 + OpenAI schema + 分发执行
-│   │   ├── manager.py             # ToolManager：统一管理本地工具 + MCP 工具
+│   │   ├── manager.py             # ToolManager：统一管理本地 + MCP 工具（支持 allowed_tools 过滤）
 │   │   ├── order.py               # 查询订单详情
 │   │   ├── product.py             # 搜索商品信息
 │   │   ├── logistics.py           # 查询物流轨迹
@@ -98,7 +101,10 @@ ecom-service-agent/
 │   │       ├── numpy_backend.py   # 手写余弦 + JSON（教学透明，零依赖）
 │   │       └── chroma_backend.py  # Chroma 嵌入式向量数据库（生产代表）
 │   ├── evaluation/                # (upcoming) Agent 评估体系
-│   ├── multi_agent/               # (upcoming) 多 Agent 协作
+│   ├── multi_agent/               # Multi-Agent 协作（第7期）
+│   │   ├── router.py              # 意图路由器（LLM 分类 → 子 Agent）
+│   │   ├── agents.py              # SubAgent 子 Agent 类 + 配置
+│   │   └── orchestrator.py        # 编排器：路由 → 执行 → 结构化提取
 │   ├── knowledge/                 # 知识库源文档（markdown）
 │   │   ├── 退换货政策.md
 │   │   ├── 配送说明.md
@@ -119,7 +125,8 @@ ecom-service-agent/
     ├── test_conversation_management.py  # 多轮对话管理
     ├── test_react_agent.py        # ReAct Agent + Function Calling
     ├── test_mcp.py                # MCP 集成
-    └── test_rag.py                # RAG 知识库检索
+    ├── test_rag.py                # RAG 知识库检索
+    └── test_multi_agent.py        # Multi-Agent 协作
 ```
 
 ### 更新日志
@@ -132,6 +139,7 @@ ecom-service-agent/
 | 第 4 期 | MCP 集成 (Streamable HTTP) | v4-mcp-integration | 2026-05-01 |
 | 第 5 期 | RAG 检索增强生成（FAQ + 政策知识库） | v5-rag | 2026-05-13 |
 | 第 6 期 | 架构重构：app/ 分层 + 高级篇目录预留 | v6-restructure | 2026-05-17 |
+| 第 7 期 | Multi-Agent 协作（客服路由 + 售前/售后/投诉分流） | v7-multi-agent | 2026-05-17 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
 
