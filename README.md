@@ -101,7 +101,7 @@ ecom-service-agent/
 │   │       ├── numpy_backend.py   # 手写余弦 + JSON（教学透明，零依赖）
 │   │       └── chroma_backend.py  # Chroma 嵌入式向量数据库（生产代表）
 │   ├── evaluation/                # (upcoming) Agent 评估体系
-│   ├── multi_agent/               # Multi-Agent 协作（第7期）
+│   ├── multi_agent/               # Multi-Agent 协作（第6期）
 │   │   ├── router.py              # 意图路由器（LLM 分类 → 子 Agent）
 │   │   ├── agents.py              # SubAgent 子 Agent 类 + 配置
 │   │   └── orchestrator.py        # 编排器：路由 → 执行 → 结构化提取
@@ -138,8 +138,7 @@ ecom-service-agent/
 | 第 3 期 | ReAct Agent + 工具调用 (Function Calling) | v3-react-and-function-calling | 2026-04-27 |
 | 第 4 期 | MCP 集成 (Streamable HTTP) | v4-mcp-integration | 2026-05-01 |
 | 第 5 期 | RAG 检索增强生成（FAQ + 政策知识库） | v5-rag | 2026-05-13 |
-| 第 6 期 | 架构重构：app/ 分层 + 高级篇目录预留 | v6-restructure | 2026-05-17 |
-| 第 7 期 | Multi-Agent 协作（客服路由 + 售前/售后/投诉分流） | v7-multi-agent | 2026-05-17 |
+| 第 6 期 | Multi-Agent 协作（客服路由 + 售前/售后/投诉分流） | v7-multi-agent | 2026-05-17 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
 
