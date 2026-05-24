@@ -7,12 +7,12 @@ from app.agent.storage import delete_session, load_session, save_session
 from app.agent.summarizer import summarize
 from app.config.settings import settings
 from app.prompts.customer_service import SYSTEM_PROMPT
-from app.schemas.response import CustomerServiceResponse
+from app.schemas.response import CustomerServiceResponse, IntentType
 from app.tools.manager import ToolManager
 
 
 class EcomAgent:
-    """电商客服 Agent —— 第四期：MCP (Model Context Protocol) 集成"""
+    """电商客服 Agent —— 第七期：Memory 短期记忆 & 长期记忆"""
 
     def __init__(self, session_path: Optional[str] = None):
         self.client = OpenAI(
@@ -31,6 +31,20 @@ class EcomAgent:
             mcp_server_url=settings.mcp_server_url,
         )
 
+        from app.agent.memory import MemoryManager
+        self.memory_manager = MemoryManager(
+            client=self.client,
+            model=self.model,
+            user_id=settings.memory_user_id,
+            memory_dir=settings.memory_dir,
+            memory_enabled=settings.memory_enabled,
+            max_ltm_facts=settings.max_ltm_facts,
+        )
+
+        if settings.memory_enabled:
+            from app.tools.memory_tool import set_memory_manager
+            set_memory_manager(self.memory_manager)
+
         self.raw_messages: list[dict] = []
         self.summary: Optional[str] = None
 
@@ -38,6 +52,8 @@ class EcomAgent:
         if loaded:
             self.summary = loaded["summary"]
             self.raw_messages = loaded["messages"]
+            if loaded.get("short_term_memory"):
+                self.memory_manager.restore_stm(loaded["short_term_memory"])
 
     @property
     def history_size(self) -> int:
@@ -51,6 +67,8 @@ class EcomAgent:
 
         result = self._extract_structured_response(final_text)
 
+        self.memory_manager.update_short_term(self.raw_messages[-6:])
+
         self.raw_messages.append(
             {"role": "assistant", "content": result.model_dump_json(ensure_ascii=False)}
         )
@@ -58,18 +76,26 @@ class EcomAgent:
         if len(self.raw_messages) > self.history_threshold:
             self._compress_history()
 
-        save_session(self.session_path, self.raw_messages, self.summary)
+        save_session(
+            self.session_path, self.raw_messages, self.summary,
+            short_term_memory=self.memory_manager.stm_to_dict(),
+        )
         return result
 
     def reset(self):
         self.raw_messages = []
         self.summary = None
+        self.memory_manager.reset_short_term()
         delete_session(self.session_path)
 
     def save(self) -> None:
-        save_session(self.session_path, self.raw_messages, self.summary)
+        save_session(
+            self.session_path, self.raw_messages, self.summary,
+            short_term_memory=self.memory_manager.stm_to_dict(),
+        )
 
     def close(self):
+        self.memory_manager.consolidate_to_long_term(self.raw_messages, self.summary)
         self.tool_manager.close()
 
     def _react_loop(self) -> str:
@@ -134,27 +160,61 @@ class EcomAgent:
 
     def _extract_structured_response(self, text: str) -> CustomerServiceResponse:
         """从最终文本中提取结构化元数据（意图、置信度等）。"""
-        response = self.client.beta.chat.completions.parse(
+        try:
+            response = self.client.beta.chat.completions.parse(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "基于以下客服回复内容，提取结构化信息。"
+                            "reply 字段直接使用原文，不要修改或缩减。"
+                        ),
+                    },
+                    {"role": "user", "content": text},
+                ],
+                temperature=0.0,
+                response_format=CustomerServiceResponse,
+            )
+            return response.choices[0].message.parsed
+        except Exception:
+            return self._extract_structured_fallback(text)
+
+    def _extract_structured_fallback(self, text: str) -> CustomerServiceResponse:
+        """当 response_format 不被 API 支持时，用 prompt 引导 JSON 输出。"""
+        intent_values = ", ".join(f'"{e.value}"' for e in IntentType)
+        response = self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {
                     "role": "system",
                     "content": (
-                        "基于以下客服回复内容，提取结构化信息。"
-                        "reply 字段直接使用原文，不要修改或缩减。"
+                        "基于以下客服回复内容，提取结构化信息并输出 JSON。\n"
+                        "reply 字段直接使用原文，不要修改或缩减。\n\n"
+                        "必须严格按照以下 JSON 格式输出（不要加 markdown 代码块）：\n"
+                        "{\n"
+                        f'  "intent": <从以下选择: {intent_values}>,\n'
+                        '  "confidence": <0.0到1.0的浮点数>,\n'
+                        '  "reply": <原文回复内容>,\n'
+                        '  "requires_human": <true或false>,\n'
+                        '  "follow_up_question": <追问问题或null>\n'
+                        "}"
                     ),
                 },
                 {"role": "user", "content": text},
             ],
             temperature=0.0,
-            response_format=CustomerServiceResponse,
         )
-        return response.choices[0].message.parsed
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        return CustomerServiceResponse.model_validate_json(raw)
 
     def _build_messages(self) -> list[dict]:
         messages: list[dict] = [
             {"role": "system", "content": SYSTEM_PROMPT}
         ]
+        messages.extend(self.memory_manager.build_memory_prompt_sections())
         if self.summary:
             messages.append(
                 {

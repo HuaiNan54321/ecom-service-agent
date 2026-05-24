@@ -60,25 +60,31 @@
 
 ```
 ecom-service-agent/
-├── main.py                        # CLI 入口（支持单 Agent / Multi-Agent 模式切换）
+├── main.py                        # CLI 入口（支持单 Agent / Multi-Agent 模式切换 + memory 命令）
 ├── requirements.txt
 ├── .env.example
 │
 ├── app/                           # 主 Bot 全部代码 + 数据
 │   ├── config/
-│   │   └── settings.py            # 配置管理（从 .env 读取，含 MCP / RAG / Multi-Agent 开关）
+│   │   └── settings.py            # 配置管理（从 .env 读取，含 MCP / RAG / Multi-Agent / Memory 开关）
 │   ├── prompts/
-│   │   ├── customer_service.py    # 电商客服 system prompt（含工具使用指南）
+│   │   ├── customer_service.py    # 电商客服 system prompt（含工具使用指南 + 记忆能力）
 │   │   ├── summarizer.py          # 历史摘要 prompt
-│   │   └── agents.py              # Multi-Agent 子 Agent prompt（售前/售后/投诉 + Router）
+│   │   ├── agents.py              # Multi-Agent 子 Agent prompt（售前/售后/投诉 + Router）
+│   │   └── memory.py              # 记忆提取 prompt（短期 STM / 长期 LTM 事实抽取）
 │   ├── schemas/
 │   │   └── response.py            # 结构化输出 schema（Pydantic）
 │   ├── agent/
-│   │   ├── chat.py                # 核心 ReAct 循环（通过 ToolManager 调用工具）
+│   │   ├── chat.py                # 核心 ReAct 循环（集成 MemoryManager）
 │   │   ├── summarizer.py          # LLM 自我压缩老对话（支持工具消息）
-│   │   ├── storage.py             # 会话 JSON 持久化
+│   │   ├── storage.py             # 会话 JSON 持久化（含短期记忆）
+│   │   ├── memory/                # 记忆系统（第7期）
+│   │   │   ├── __init__.py        # 导出 MemoryManager / ShortTermMemory / LongTermMemory
+│   │   │   ├── manager.py         # MemoryManager：统一管理短期 + 长期记忆
+│   │   │   ├── short_term.py      # 短期记忆：会话内事实提取
+│   │   │   ├── long_term.py       # 长期记忆：跨会话持久化（JSON per user）
+│   │   │   └── extraction.py      # LLM 事实提取（共用模块）
 │   │   ├── strategies/            # (upcoming) Agent 执行策略
-│   │   ├── memory/                # (upcoming) 短期记忆 & 长期记忆
 │   │   └── skills/                # (upcoming) 可复用能力模块
 │   ├── tools/                     # 电商工具集（Function Calling）
 │   │   ├── mock_data.py           # Mock 数据：订单、商品、物流
@@ -88,7 +94,8 @@ ecom-service-agent/
 │   │   ├── product.py             # 搜索商品信息
 │   │   ├── logistics.py           # 查询物流轨迹
 │   │   ├── refund.py              # 申请退款
-│   │   └── knowledge.py           # search_knowledge：RAG 政策/FAQ 检索
+│   │   ├── knowledge.py           # search_knowledge：RAG 政策/FAQ 检索
+│   │   └── memory_tool.py         # recall_user_memory：查询用户记忆
 │   ├── mcp_client/                # MCP Client（同步封装）
 │   │   ├── client.py              # MCPClient：后台线程管理异步连接
 │   │   └── converter.py           # MCP Tool schema → OpenAI function calling 格式
@@ -104,7 +111,7 @@ ecom-service-agent/
 │   ├── multi_agent/               # Multi-Agent 协作（第6期）
 │   │   ├── router.py              # 意图路由器（LLM 分类 → 子 Agent）
 │   │   ├── agents.py              # SubAgent 子 Agent 类 + 配置
-│   │   └── orchestrator.py        # 编排器：路由 → 执行 → 结构化提取
+│   │   └── orchestrator.py        # 编排器：路由 → 执行 → 结构化提取（集成 MemoryManager）
 │   ├── knowledge/                 # 知识库源文档（markdown）
 │   │   ├── 退换货政策.md
 │   │   ├── 配送说明.md
@@ -115,7 +122,9 @@ ecom-service-agent/
 │   └── sessions/                  # 运行时生成，已 .gitignore
 │       ├── session.json           # 当前会话快照
 │       ├── kb_index.json          # NumpyBackend 索引
-│       └── chroma/                # ChromaBackend 持久化目录
+│       ├── chroma/                # ChromaBackend 持久化目录
+│       └── memory/                # 长期记忆存储（按 user_id 分文件）
+│           └── {user_id}.json
 │
 ├── mcp_server/                    # MCP Server（独立微服务）
 │   └── server.py                  # FastMCP + Streamable HTTP，暴露电商工具
@@ -126,7 +135,8 @@ ecom-service-agent/
     ├── test_react_agent.py        # ReAct Agent + Function Calling
     ├── test_mcp.py                # MCP 集成
     ├── test_rag.py                # RAG 知识库检索
-    └── test_multi_agent.py        # Multi-Agent 协作
+    ├── test_multi_agent.py        # Multi-Agent 协作
+    └── test_memory.py             # Memory 短期记忆 & 长期记忆
 ```
 
 ### 更新日志
@@ -139,6 +149,7 @@ ecom-service-agent/
 | 第 4 期 | MCP 集成 (Streamable HTTP) | v4-mcp-integration | 2026-05-01 |
 | 第 5 期 | RAG 检索增强生成（FAQ + 政策知识库） | v5-rag | 2026-05-13 |
 | 第 6 期 | Multi-Agent 协作（客服路由 + 售前/售后/投诉分流） | v7-multi-agent | 2026-05-17 |
+| 第 7 期 | Memory：短期记忆 & 长期记忆 | v8-memory | 2026-05-23 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
 

@@ -9,6 +9,7 @@ from app.tools.logistics import query_logistics
 from app.tools.refund import apply_refund
 from app.tools.knowledge import search_knowledge
 from app.tools.user_orders import list_user_orders
+from app.tools.memory_tool import recall_user_memory
 
 _TOOL_MAP: dict[str, Callable] = {
     "query_order": query_order,
@@ -17,6 +18,7 @@ _TOOL_MAP: dict[str, Callable] = {
     "apply_refund": apply_refund,
     "search_knowledge": search_knowledge,
     "list_user_orders": list_user_orders,
+    "recall_user_memory": recall_user_memory,
 }
 
 TOOL_DEFINITIONS: list[dict] = [
@@ -132,6 +134,27 @@ TOOL_DEFINITIONS: list[dict] = [
                     },
                 },
                 "required": ["order_id", "reason"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "recall_user_memory",
+            "description": (
+                "查询当前用户的记忆信息，包括本次对话提取的短期记忆和跨会话的长期记忆。"
+                "当需要回顾用户的偏好、历史问题、会员信息等时使用。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "可选的查询关键词，用于过滤记忆内容",
+                        "default": "",
+                    }
+                },
+                "required": [],
             },
         },
     },

@@ -27,8 +27,14 @@ class Settings(BaseSettings):
     chroma_persist_dir: str = "app/sessions/chroma"
     chroma_collection: str = "ecom_kb"
 
-    # Multi-Agent 配置（第7期）
+    # Multi-Agent 配置（第6期）
     multi_agent_enabled: bool = False
+
+    # Memory 配置（第7期）
+    memory_enabled: bool = True
+    memory_dir: str = "app/sessions/memory"
+    memory_user_id: str = "default"
+    max_ltm_facts: int = 50
 
     # 多轮对话管理
     session_path: str = "app/sessions/session.json"
