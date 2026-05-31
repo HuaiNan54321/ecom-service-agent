@@ -12,7 +12,7 @@ from app.tools.manager import ToolManager
 
 
 class EcomAgent:
-    """电商客服 Agent —— 第七期：Memory 短期记忆 & 长期记忆"""
+    """电商客服 Agent —— 第八期：Skill 可复用能力模块"""
 
     def __init__(self, session_path: Optional[str] = None):
         self.client = OpenAI(
@@ -44,6 +44,15 @@ class EcomAgent:
         if settings.memory_enabled:
             from app.tools.memory_tool import set_memory_manager
             set_memory_manager(self.memory_manager)
+
+        from app.agent.skills import SkillManager
+        self.skill_manager = SkillManager(
+            skills_dir=settings.skills_dir,
+            enabled=settings.skills_enabled,
+        )
+        if settings.skills_enabled:
+            from app.tools.skill_tool import set_skill_manager
+            set_skill_manager(self.skill_manager)
 
         self.raw_messages: list[dict] = []
         self.summary: Optional[str] = None
@@ -211,8 +220,12 @@ class EcomAgent:
         return CustomerServiceResponse.model_validate_json(raw)
 
     def _build_messages(self) -> list[dict]:
+        system_content = SYSTEM_PROMPT
+        if self.skill_manager and self.skill_manager.enabled:
+            system_content += self.skill_manager.build_catalog_prompt()
+
         messages: list[dict] = [
-            {"role": "system", "content": SYSTEM_PROMPT}
+            {"role": "system", "content": system_content}
         ]
         messages.extend(self.memory_manager.build_memory_prompt_sections())
         if self.summary:

@@ -63,6 +63,15 @@ class MultiAgentOrchestrator:
             from app.tools.memory_tool import set_memory_manager
             set_memory_manager(self.memory_manager)
 
+        from app.agent.skills import SkillManager
+        self.skill_manager = SkillManager(
+            skills_dir=settings.skills_dir,
+            enabled=settings.skills_enabled,
+        )
+        if settings.skills_enabled:
+            from app.tools.skill_tool import set_skill_manager
+            set_skill_manager(self.skill_manager)
+
         self.raw_messages: list[dict] = []
         self.summary: Optional[str] = None
 
@@ -127,8 +136,12 @@ class MultiAgentOrchestrator:
 
     def _build_messages(self, agent: SubAgent) -> list[dict]:
         """用子 Agent 的 system prompt 构建消息列表。"""
+        system_content = agent.system_prompt
+        if self.skill_manager and self.skill_manager.enabled:
+            system_content += self.skill_manager.build_catalog_prompt()
+
         messages: list[dict] = [
-            {"role": "system", "content": agent.system_prompt}
+            {"role": "system", "content": system_content}
         ]
         messages.extend(self.memory_manager.build_memory_prompt_sections())
         if self.summary:

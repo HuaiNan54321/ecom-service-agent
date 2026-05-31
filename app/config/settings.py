@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     memory_user_id: str = "default"
     max_ltm_facts: int = 50
 
+    # Skill 配置（第8期）
+    skills_enabled: bool = True
+    skills_dir: str = "app/skills"
+
     # 多轮对话管理
     session_path: str = "app/sessions/session.json"
     history_threshold: int = 10  # 消息压缩策略通常为上下文达到一定的token数，例如claude code通常为达到最大上下文窗口的70%左右，此处简略为原始消息条数超过10轮

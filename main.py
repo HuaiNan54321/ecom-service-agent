@@ -27,8 +27,8 @@ def main():
 
     print("=" * 50)
     print(f"  并夕夕 · 智能客服「小夕」({mode})")
-    print("  支持工具调用：查订单/商品/物流/退款 + 政策检索 + 用户记忆")
-    print("  输入 quit/exit 退出, reset 重置, memory 查看记忆")
+    print("  支持工具调用 + 政策检索 + 用户记忆 + 技能编排")
+    print("  输入 quit/exit 退出, reset 重置, memory 查看记忆, skills 查看技能")
     print("=" * 50)
     print()
 
@@ -56,6 +56,17 @@ def main():
         if user_input.lower() == "reset":
             agent.reset()
             print("对话已重置。\n")
+            continue
+
+        if user_input.lower() == "skills":
+            if hasattr(agent, "skill_manager") and agent.skill_manager.enabled:
+                catalog = agent.skill_manager.get_catalog()
+                print(f"\n--- 已加载 {len(catalog)} 个技能 ---")
+                for s in catalog:
+                    print(f"  - {s['name']}：{s['description']}")
+                print()
+            else:
+                print("技能系统未启用\n")
             continue
 
         if user_input.lower() == "memory":

@@ -10,6 +10,7 @@ from app.tools.refund import apply_refund
 from app.tools.knowledge import search_knowledge
 from app.tools.user_orders import list_user_orders
 from app.tools.memory_tool import recall_user_memory
+from app.tools.skill_tool import load_skill
 
 _TOOL_MAP: dict[str, Callable] = {
     "query_order": query_order,
@@ -19,6 +20,7 @@ _TOOL_MAP: dict[str, Callable] = {
     "search_knowledge": search_knowledge,
     "list_user_orders": list_user_orders,
     "recall_user_memory": recall_user_memory,
+    "load_skill": load_skill,
 }
 
 TOOL_DEFINITIONS: list[dict] = [
@@ -155,6 +157,28 @@ TOOL_DEFINITIONS: list[dict] = [
                     }
                 },
                 "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "load_skill",
+            "description": (
+                "加载指定技能的完整操作指令。"
+                "当用户问题匹配某个可用技能时，调用此工具获取该技能的详细处理流程，"
+                "然后按流程指引使用已有工具完成用户请求。"
+                "可用技能会在系统提示中列出。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "skill_name": {
+                        "type": "string",
+                        "description": "要加载的技能名称，如 process-return、track-order、product-recommend",
+                    }
+                },
+                "required": ["skill_name"],
             },
         },
     },

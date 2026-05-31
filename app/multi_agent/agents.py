@@ -15,20 +15,20 @@ AGENT_CONFIGS = {
     "presale": {
         "name": "小夕-售前",
         "prompt": PRESALE_PROMPT,
-        "tools": {"query_product", "search_knowledge", "list_user_orders"},
+        "tools": {"query_product", "search_knowledge", "list_user_orders", "load_skill"},
     },
     "postsale": {
         "name": "小夕-售后",
         "prompt": POSTSALE_PROMPT,
         "tools": {
             "query_order", "query_logistics", "apply_refund",
-            "list_user_orders", "search_knowledge",
+            "list_user_orders", "search_knowledge", "load_skill",
         },
     },
     "complaint": {
         "name": "小夕-投诉",
         "prompt": COMPLAINT_PROMPT,
-        "tools": {"query_order", "search_knowledge"},
+        "tools": {"query_order", "search_knowledge", "load_skill"},
     },
 }
 

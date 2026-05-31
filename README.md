@@ -1,5 +1,18 @@
 # Ecom-Service-Agent: 从0到1实战企业级电商客服Agent系统
 
+## 求职辅导
+
+我目前也在做 **AI 方向的求职辅导**，服务内容包括：
+
+- 简历精修（针对 AI / Agent 岗位优化）
+- 项目包装（这是最核心的，根据你过往的工作/实习和项目经历，定制化包装成agent项目，尽量多地融入agent主流技术，以及给你一份面试时口述的逐字稿）
+- 模拟面试（结合你的项目经历和大厂常问的问题进行深挖）
+- 全程陪跑（从投递到拿 offer）
+
+有需要的同学可以添加我的微信：**HuaiNan54321**，备注「求职辅导」。
+
+---
+
 ## 背景
 
 大家好，我是淮南，Top 985科班出身，有多家大厂后端 & AI Agent 研发经验。
@@ -40,7 +53,7 @@
 **高级篇**
 - Multi-Agent 协作（客服路由、售前售后分流）
 - Memory：短期记忆 & 长期记忆
-- Skill：可复用的能力模块（退货处理、订单跟踪等标准化流程）
+- Skill：可复用的能力模块（退货处理、订单跟踪等标准化流程）✅
 - Agent 评估体系
 
 **生产篇**
@@ -60,13 +73,13 @@
 
 ```
 ecom-service-agent/
-├── main.py                        # CLI 入口（支持单 Agent / Multi-Agent 模式切换 + memory 命令）
+├── main.py                        # CLI 入口（支持单 Agent / Multi-Agent 模式切换 + memory/skills 命令）
 ├── requirements.txt
 ├── .env.example
 │
 ├── app/                           # 主 Bot 全部代码 + 数据
 │   ├── config/
-│   │   └── settings.py            # 配置管理（从 .env 读取，含 MCP / RAG / Multi-Agent / Memory 开关）
+│   │   └── settings.py            # 配置管理（从 .env 读取，含 MCP / RAG / Multi-Agent / Memory / Skill 开关）
 │   ├── prompts/
 │   │   ├── customer_service.py    # 电商客服 system prompt（含工具使用指南 + 记忆能力）
 │   │   ├── summarizer.py          # 历史摘要 prompt
@@ -75,7 +88,7 @@ ecom-service-agent/
 │   ├── schemas/
 │   │   └── response.py            # 结构化输出 schema（Pydantic）
 │   ├── agent/
-│   │   ├── chat.py                # 核心 ReAct 循环（集成 MemoryManager）
+│   │   ├── chat.py                # 核心 ReAct 循环（集成 MemoryManager + SkillManager）
 │   │   ├── summarizer.py          # LLM 自我压缩老对话（支持工具消息）
 │   │   ├── storage.py             # 会话 JSON 持久化（含短期记忆）
 │   │   ├── memory/                # 记忆系统（第7期）
@@ -84,8 +97,10 @@ ecom-service-agent/
 │   │   │   ├── short_term.py      # 短期记忆：会话内事实提取
 │   │   │   ├── long_term.py       # 长期记忆：跨会话持久化（JSON per user）
 │   │   │   └── extraction.py      # LLM 事实提取（共用模块）
-│   │   ├── strategies/            # (upcoming) Agent 执行策略
-│   │   └── skills/                # (upcoming) 可复用能力模块
+│   │   ├── skills/                # Skill 加载器（第8期）
+│   │   │   ├── __init__.py        # 导出 SkillManager / SkillMeta
+│   │   │   └── loader.py          # SkillManager：扫描、发现、加载 SKILL.md（渐进式披露）
+│   │   └── strategies/            # (upcoming) Agent 执行策略
 │   ├── tools/                     # 电商工具集（Function Calling）
 │   │   ├── mock_data.py           # Mock 数据：订单、商品、物流
 │   │   ├── registry.py            # 本地工具注册表 + OpenAI schema + 分发执行
@@ -95,7 +110,8 @@ ecom-service-agent/
 │   │   ├── logistics.py           # 查询物流轨迹
 │   │   ├── refund.py              # 申请退款
 │   │   ├── knowledge.py           # search_knowledge：RAG 政策/FAQ 检索
-│   │   └── memory_tool.py         # recall_user_memory：查询用户记忆
+│   │   ├── memory_tool.py         # recall_user_memory：查询用户记忆
+│   │   └── skill_tool.py          # load_skill：按需加载技能指令
 │   ├── mcp_client/                # MCP Client（同步封装）
 │   │   ├── client.py              # MCPClient：后台线程管理异步连接
 │   │   └── converter.py           # MCP Tool schema → OpenAI function calling 格式
@@ -111,7 +127,14 @@ ecom-service-agent/
 │   ├── multi_agent/               # Multi-Agent 协作（第6期）
 │   │   ├── router.py              # 意图路由器（LLM 分类 → 子 Agent）
 │   │   ├── agents.py              # SubAgent 子 Agent 类 + 配置
-│   │   └── orchestrator.py        # 编排器：路由 → 执行 → 结构化提取（集成 MemoryManager）
+│   │   └── orchestrator.py        # 编排器：路由 → 执行 → 结构化提取（集成 MemoryManager + SkillManager）
+│   ├── skills/                    # Skill 技能内容（第8期，遵循 Agent Skills 开放标准）
+│   │   ├── process-return/
+│   │   │   └── SKILL.md           # 退货退款处理技能（确认订单→校验资格→退款→告知进度）
+│   │   ├── track-order/
+│   │   │   └── SKILL.md           # 订单物流跟踪技能（查单→查物流→综合建议）
+│   │   └── product-recommend/
+│   │       └── SKILL.md           # 商品推荐技能（了解需求→查偏好→搜索→推荐）
 │   ├── knowledge/                 # 知识库源文档（markdown）
 │   │   ├── 退换货政策.md
 │   │   ├── 配送说明.md
@@ -136,7 +159,8 @@ ecom-service-agent/
     ├── test_mcp.py                # MCP 集成
     ├── test_rag.py                # RAG 知识库检索
     ├── test_multi_agent.py        # Multi-Agent 协作
-    └── test_memory.py             # Memory 短期记忆 & 长期记忆
+    ├── test_memory.py             # Memory 短期记忆 & 长期记忆
+    └── test_skills.py             # Skill 可复用能力模块
 ```
 
 ### 更新日志
@@ -150,18 +174,6 @@ ecom-service-agent/
 | 第 5 期 | RAG 检索增强生成（FAQ + 政策知识库） | v5-rag | 2026-05-13 |
 | 第 6 期 | Multi-Agent 协作（客服路由 + 售前/售后/投诉分流） | v7-multi-agent | 2026-05-17 |
 | 第 7 期 | Memory：短期记忆 & 长期记忆 | v8-memory | 2026-05-23 |
+| 第 8 期 | Skill：可复用能力模块（基于 Agent Skills 开放标准） | v9-skills | 2026-05-31 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
-
----
-
-## 求职辅导
-
-我目前也在做 **AI 方向的求职辅导**，服务内容包括：
-
-- 简历精修（针对 AI / Agent 岗位优化）
-- 项目包装（帮你把项目经历讲出亮点）
-- 模拟面试（还原大厂真实面试流程）
-- 全程陪跑（从投递到拿 offer）
-
-有需要的同学可以添加我的微信：**HuaiNan54321**，备注「求职辅导」。
