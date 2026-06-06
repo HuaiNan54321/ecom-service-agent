@@ -1,0 +1,111 @@
+{
+  "cases": [
+    {
+      "id": "order_query_basic",
+      "description": "查询已发货订单详情",
+      "turns": ["帮我查一下订单 ORD-20240115-001 的状态"],
+      "expected_intent": "order_query",
+      "expected_keywords": ["Nike", "899"],
+      "expected_requires_human": false,
+      "expected_tools": ["query_order"],
+      "min_tool_calls": 1,
+      "max_tokens": 6000
+    },
+    {
+      "id": "logistics_track",
+      "description": "查询物流轨迹",
+      "turns": ["我的订单 ORD-20240115-001 现在到哪了？"],
+      "expected_intent": "order_query",
+      "expected_keywords": ["顺丰"],
+      "expected_requires_human": false,
+      "expected_tools": ["query_logistics"],
+      "min_tool_calls": 1,
+      "max_tokens": 6000
+    },
+    {
+      "id": "logistics_no_tracking",
+      "description": "查询未发货订单的物流（边界：无运单号）",
+      "turns": ["订单 ORD-20240120-002 的快递到哪了？"],
+      "expected_intent": "order_query",
+      "expected_keywords": ["发货"],
+      "expected_requires_human": false,
+      "expected_tools": ["query_logistics"],
+      "min_tool_calls": 1,
+      "max_tokens": 6000
+    },
+    {
+      "id": "product_out_of_stock",
+      "description": "咨询缺货商品（Levi's 501 库存为 0，是否售罄交给质量/幻觉 judge 判定）",
+      "turns": ["Levi's 501 牛仔裤还有货吗？"],
+      "expected_intent": "product_consult",
+      "expected_keywords": ["Levi"],
+      "expected_requires_human": false,
+      "expected_tools": ["query_product"],
+      "min_tool_calls": 1,
+      "max_tokens": 6000
+    },
+    {
+      "id": "return_request",
+      "description": "申请退款（敏感操作：先确认再退是正确行为，故不强制调用工具）",
+      "turns": ["我买的 Levi's 牛仔裤尺码不合适，订单号 ORD-20240118-004，想退款"],
+      "expected_intent": "return_request",
+      "expected_keywords": ["退款"],
+      "expected_requires_human": false,
+      "expected_tools": [],
+      "max_tokens": 8000
+    },
+    {
+      "id": "knowledge_policy",
+      "description": "询问退换货政策（RAG 知识检索；是否转人工取决于检索是否命中，故不校验）",
+      "turns": ["你们支持七天无理由退货吗？"],
+      "expected_intent": "return_request",
+      "expected_keywords": ["七天"],
+      "expected_tools": ["search_knowledge"],
+      "min_tool_calls": 1,
+      "max_tokens": 6000
+    },
+    {
+      "id": "complaint_to_human",
+      "description": "强烈投诉，应识别为投诉并倾向转人工",
+      "turns": ["你们这什么破服务！东西质量太差了，我要投诉！必须给我个说法，不然就去消协告你们！"],
+      "expected_intent": "complaint",
+      "expected_keywords": [],
+      "expected_requires_human": true,
+      "expected_tools": [],
+      "max_tokens": 6000
+    },
+    {
+      "id": "greeting_no_tool",
+      "description": "纯问候，不应调用任何工具",
+      "turns": ["你好呀"],
+      "expected_intent": "greeting",
+      "expected_keywords": [],
+      "expected_requires_human": false,
+      "expected_tools": [],
+      "min_tool_calls": 0,
+      "max_tokens": 4000
+    },
+    {
+      "id": "multi_turn_followup",
+      "description": "多轮：先表达意图，再补订单号",
+      "turns": ["我想查一下我的订单", "订单号是 ORD-20240110-003"],
+      "expected_intent": "order_query",
+      "expected_keywords": ["小米"],
+      "expected_requires_human": false,
+      "expected_tools": ["query_order"],
+      "min_tool_calls": 1,
+      "max_tokens": 9000
+    },
+    {
+      "id": "list_orders",
+      "description": "未提供订单号，列出用户全部订单",
+      "turns": ["我都买过哪些东西？帮我看下我的订单"],
+      "expected_intent": "order_query",
+      "expected_keywords": [],
+      "expected_requires_human": false,
+      "expected_tools": ["list_user_orders"],
+      "min_tool_calls": 1,
+      "max_tokens": 6000
+    }
+  ]
+}

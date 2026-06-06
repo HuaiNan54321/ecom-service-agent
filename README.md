@@ -54,7 +54,7 @@
 - Multi-Agent 协作（客服路由、售前售后分流）
 - Memory：短期记忆 & 长期记忆
 - Skill：可复用的能力模块（退货处理、订单跟踪等标准化流程）✅
-- Agent 评估体系
+- Agent 评估体系 ✅
 
 **生产篇**
 - Guardrails 安全护栏（Prompt Injection 检测、输出幻觉校验、敏感信息过滤、意图越界拦截）
@@ -79,12 +79,13 @@ ecom-service-agent/
 │
 ├── app/                           # 主 Bot 全部代码 + 数据
 │   ├── config/
-│   │   └── settings.py            # 配置管理（从 .env 读取，含 MCP / RAG / Multi-Agent / Memory / Skill 开关）
+│   │   └── settings.py            # 配置管理（从 .env 读取，含 MCP / RAG / Multi-Agent / Memory / Skill / Evaluation 配置）
 │   ├── prompts/
 │   │   ├── customer_service.py    # 电商客服 system prompt（含工具使用指南 + 记忆能力）
 │   │   ├── summarizer.py          # 历史摘要 prompt
 │   │   ├── agents.py              # Multi-Agent 子 Agent prompt（售前/售后/投诉 + Router）
-│   │   └── memory.py              # 记忆提取 prompt（短期 STM / 长期 LTM 事实抽取）
+│   │   ├── memory.py              # 记忆提取 prompt（短期 STM / 长期 LTM 事实抽取）
+│   │   └── evaluation.py          # LLM-as-judge prompt（回答质量 / 幻觉 / 过程合理性）
 │   ├── schemas/
 │   │   └── response.py            # 结构化输出 schema（Pydantic）
 │   ├── agent/
@@ -123,7 +124,14 @@ ecom-service-agent/
 │   │       ├── base.py            # VectorBackend 抽象接口
 │   │       ├── numpy_backend.py   # 手写余弦 + JSON（教学透明，零依赖）
 │   │       └── chroma_backend.py  # Chroma 嵌入式向量数据库（生产代表）
-│   ├── evaluation/                # (upcoming) Agent 评估体系
+│   ├── evaluation/                # Agent 评估体系（第9期）
+│   │   ├── __init__.py            # 导出 EvalCase / Sandbox / Evaluator / RunTrace 等
+│   │   ├── dataset.py             # EvalCase 数据结构 + load_dataset
+│   │   ├── trace.py               # RunTrace：沙箱采集的过程+结果载体
+│   │   ├── sandbox.py             # Sandbox：隔离环境 + 共享 client 插桩 + 采集
+│   │   ├── metrics.py             # 过程/结果双层指标（代码规则 + LLM judge）
+│   │   ├── evaluator.py           # Evaluator：跑用例 → 双层评分 → 聚合报告
+│   │   └── cases.json             # 黄金测试集（~10 条，引用 mock 数据）
 │   ├── multi_agent/               # Multi-Agent 协作（第6期）
 │   │   ├── router.py              # 意图路由器（LLM 分类 → 子 Agent）
 │   │   ├── agents.py              # SubAgent 子 Agent 类 + 配置
@@ -141,7 +149,8 @@ ecom-service-agent/
 │   │   ├── 会员权益.md
 │   │   └── 常见问题FAQ.md
 │   ├── scripts/
-│   │   └── build_kb_index.py      # 离线构建知识库索引（--backend numpy/chroma）
+│   │   ├── build_kb_index.py      # 离线构建知识库索引（--backend numpy/chroma）
+│   │   └── run_eval.py            # 离线运行评估（--mode single/multi · --judge/--no-judge · --output）
 │   └── sessions/                  # 运行时生成，已 .gitignore
 │       ├── session.json           # 当前会话快照
 │       ├── kb_index.json          # NumpyBackend 索引
@@ -160,7 +169,8 @@ ecom-service-agent/
     ├── test_rag.py                # RAG 知识库检索
     ├── test_multi_agent.py        # Multi-Agent 协作
     ├── test_memory.py             # Memory 短期记忆 & 长期记忆
-    └── test_skills.py             # Skill 可复用能力模块
+    ├── test_skills.py             # Skill 可复用能力模块
+    └── test_evaluation.py         # Agent 评估体系（沙箱 + 双层测评）
 ```
 
 ### 更新日志
@@ -175,5 +185,6 @@ ecom-service-agent/
 | 第 6 期 | Multi-Agent 协作（客服路由 + 售前/售后/投诉分流） | v7-multi-agent | 2026-05-17 |
 | 第 7 期 | Memory：短期记忆 & 长期记忆 | v8-memory | 2026-05-23 |
 | 第 8 期 | Skill：可复用能力模块（基于 Agent Skills 开放标准） | v9-skills | 2026-05-31 |
+| 第 9 期 | Agent 评估体系（沙箱重跑测试集 + 过程/结果双层指标 + LLM judge） | v10-evaluation | 2026-06-06 |
 
 > 每期更新后，这里会同步更新架构图和更新日志。
