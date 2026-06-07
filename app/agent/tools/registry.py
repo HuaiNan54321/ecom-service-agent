@@ -3,14 +3,14 @@
 import json
 from typing import Callable
 
-from app.tools.order import query_order
-from app.tools.product import query_product
-from app.tools.logistics import query_logistics
-from app.tools.refund import apply_refund
-from app.tools.knowledge import search_knowledge
-from app.tools.user_orders import list_user_orders
-from app.tools.memory_tool import recall_user_memory
-from app.tools.skill_tool import load_skill
+from app.agent.tools.order import query_order
+from app.agent.tools.product import query_product
+from app.agent.tools.logistics import query_logistics
+from app.agent.tools.refund import apply_refund
+from app.agent.tools.knowledge import search_knowledge
+from app.agent.tools.user_orders import list_user_orders
+from app.agent.tools.memory_tool import recall_user_memory
+from app.agent.tools.skill_tool import load_skill
 
 _TOOL_MAP: dict[str, Callable] = {
     "query_order": query_order,

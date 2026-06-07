@@ -11,8 +11,8 @@
 
 from __future__ import annotations
 
-from app.rag.backends.base import RetrievedChunk, VectorBackend
-from app.rag.embedder import Embedder
+from app.agent.rag.backends.base import RetrievedChunk, VectorBackend
+from app.agent.rag.embedder import Embedder
 
 __all__ = ["KnowledgeRetriever", "RetrievedChunk"]
 

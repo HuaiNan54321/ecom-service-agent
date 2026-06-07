@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import Optional
 
 from app.config.settings import settings
-from app.rag.backends import create_backend
-from app.rag.embedder import Embedder
-from app.rag.retriever import KnowledgeRetriever
+from app.agent.rag.backends import create_backend
+from app.agent.rag.embedder import Embedder
+from app.agent.rag.retriever import KnowledgeRetriever
 
 _retriever: Optional[KnowledgeRetriever] = None
 

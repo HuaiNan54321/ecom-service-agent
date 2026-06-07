@@ -1,4 +1,4 @@
-from app.tools.mock_data import ORDERS
+from app.agent.tools.mock_data import ORDERS
 
 
 def query_order(order_id: str) -> dict:

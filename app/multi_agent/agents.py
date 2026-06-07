@@ -8,7 +8,7 @@ import json
 from openai import OpenAI
 
 from app.prompts.agents import COMPLAINT_PROMPT, POSTSALE_PROMPT, PRESALE_PROMPT
-from app.tools.manager import ToolManager
+from app.agent.tools.manager import ToolManager
 
 
 AGENT_CONFIGS = {

@@ -1,4 +1,4 @@
-from app.tools.mock_data import LOGISTICS, ORDERS
+from app.agent.tools.mock_data import LOGISTICS, ORDERS
 
 
 def query_logistics(order_id: str) -> dict:

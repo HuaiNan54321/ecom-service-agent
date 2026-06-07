@@ -16,7 +16,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from app.rag.chunker import Chunk
+from app.agent.rag.chunker import Chunk
 
 
 @dataclass

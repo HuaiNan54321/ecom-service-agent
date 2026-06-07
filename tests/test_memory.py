@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 from app.agent.chat import EcomAgent  # noqa: E402
 from app.agent.storage import load_session, save_session  # noqa: E402
 from app.agent.memory import MemoryManager, ShortTermMemory, LongTermMemory  # noqa: E402
-from app.tools.memory_tool import recall_user_memory, set_memory_manager  # noqa: E402
+from app.agent.tools.memory_tool import recall_user_memory, set_memory_manager  # noqa: E402
 
 TEST_SESSION = str(ROOT / "app" / "sessions" / "test_memory_session.json")
 TEST_MEMORY_DIR = str(ROOT / "app" / "sessions" / "test_memory")

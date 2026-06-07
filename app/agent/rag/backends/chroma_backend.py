@@ -19,8 +19,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.rag.backends.base import RetrievedChunk, VectorBackend
-from app.rag.chunker import Chunk
+from app.agent.rag.backends.base import RetrievedChunk, VectorBackend
+from app.agent.rag.chunker import Chunk
 
 _EMBEDDING_MODEL_KEY = "embedding_model"
 

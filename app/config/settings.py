@@ -18,8 +18,8 @@ class Settings(BaseSettings):
 
     # RAG 配置（第5期）
     embedding_model: str = "text-embedding-3-small"
-    kb_dir: str = "app/knowledge"
-    # 向量后端：numpy（手写余弦，教学透明）/ chroma（向量数据库，生产代表）
+    kb_dir: str = "app/agent/rag/knowledge"
+    # 向量后端：numpy（手写余弦，教学透明，零依赖，默认）/ chroma（向量数据库，生产代表，需 pip install chromadb）
     rag_backend: str = "numpy"
     # NumpyBackend 的 JSON 索引路径
     kb_index_path: str = "app/sessions/kb_index.json"
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # Skill 配置（第8期）
     skills_enabled: bool = True
-    skills_dir: str = "app/skills"
+    skills_dir: str = "app/agent/skills/definitions"
 
     # Evaluation 配置（第9期，离线评估工具，无聊天开关）
     eval_dataset_path: str = "app/evaluation/cases.json"

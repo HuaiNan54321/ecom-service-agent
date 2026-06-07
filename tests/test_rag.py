@@ -25,12 +25,12 @@ sys.path.insert(0, str(ROOT))
 
 from app.agent.chat import EcomAgent  # noqa: E402
 from app.config.settings import settings  # noqa: E402
-from app.rag.backends import create_backend  # noqa: E402
-from app.rag.chunker import chunk_markdown_dir  # noqa: E402
-from app.rag.embedder import Embedder  # noqa: E402
-from app.rag.retriever import KnowledgeRetriever  # noqa: E402
+from app.agent.rag.backends import create_backend  # noqa: E402
+from app.agent.rag.chunker import chunk_markdown_dir  # noqa: E402
+from app.agent.rag.embedder import Embedder  # noqa: E402
+from app.agent.rag.retriever import KnowledgeRetriever  # noqa: E402
 from app.schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
-from app.tools import knowledge as knowledge_tool  # noqa: E402
+from app.agent.tools import knowledge as knowledge_tool  # noqa: E402
 
 TEST_SESSION = str(ROOT / "app" / "sessions" / "test_rag_session.json")
 EXPECTED_DOCS = {"退换货政策", "配送说明", "会员权益", "常见问题FAQ"}

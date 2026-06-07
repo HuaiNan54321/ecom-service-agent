@@ -7,8 +7,8 @@
 import json
 from typing import Optional
 
-from app.tools.registry import TOOL_DEFINITIONS as LOCAL_TOOL_DEFINITIONS
-from app.tools.registry import execute_tool as local_execute_tool
+from app.agent.tools.registry import TOOL_DEFINITIONS as LOCAL_TOOL_DEFINITIONS
+from app.agent.tools.registry import execute_tool as local_execute_tool
 
 
 class ToolManager:

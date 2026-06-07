@@ -88,7 +88,7 @@ ecom-service-agent/
 │   │   └── evaluation.py          # LLM-as-judge prompt（回答质量 / 幻觉 / 过程合理性）
 │   ├── schemas/
 │   │   └── response.py            # 结构化输出 schema（Pydantic）
-│   ├── agent/
+│   ├── agent/                     # Agent 核心实现 + 全部 Agent 技术栈（tools / rag / skills）
 │   │   ├── chat.py                # 核心 ReAct 循环（集成 MemoryManager + SkillManager）
 │   │   ├── summarizer.py          # LLM 自我压缩老对话（支持工具消息）
 │   │   ├── storage.py             # 会话 JSON 持久化（含短期记忆）
@@ -98,32 +98,44 @@ ecom-service-agent/
 │   │   │   ├── short_term.py      # 短期记忆：会话内事实提取
 │   │   │   ├── long_term.py       # 长期记忆：跨会话持久化（JSON per user）
 │   │   │   └── extraction.py      # LLM 事实提取（共用模块）
-│   │   ├── skills/                # Skill 加载器（第8期）
+│   │   ├── skills/                # Skill 模块（第8期）：代码 + 技能内容分层
 │   │   │   ├── __init__.py        # 导出 SkillManager / SkillMeta
-│   │   │   └── loader.py          # SkillManager：扫描、发现、加载 SKILL.md（渐进式披露）
-│   │   └── strategies/            # (upcoming) Agent 执行策略
-│   ├── tools/                     # 电商工具集（Function Calling）
-│   │   ├── mock_data.py           # Mock 数据：订单、商品、物流
-│   │   ├── registry.py            # 本地工具注册表 + OpenAI schema + 分发执行
-│   │   ├── manager.py             # ToolManager：统一管理本地 + MCP 工具（支持 allowed_tools 过滤）
-│   │   ├── order.py               # 查询订单详情
-│   │   ├── product.py             # 搜索商品信息
-│   │   ├── logistics.py           # 查询物流轨迹
-│   │   ├── refund.py              # 申请退款
-│   │   ├── knowledge.py           # search_knowledge：RAG 政策/FAQ 检索
-│   │   ├── memory_tool.py         # recall_user_memory：查询用户记忆
-│   │   └── skill_tool.py          # load_skill：按需加载技能指令
+│   │   │   ├── loader.py          # SkillManager：扫描、发现、加载 SKILL.md（渐进式披露）
+│   │   │   └── definitions/       # 技能内容（遵循 Agent Skills 开放标准，每个一个 SKILL.md）
+│   │   │       ├── process-return/
+│   │   │       │   └── SKILL.md   # 退货退款处理技能（确认订单→校验资格→退款→告知进度）
+│   │   │       ├── track-order/
+│   │   │       │   └── SKILL.md   # 订单物流跟踪技能（查单→查物流→综合建议）
+│   │   │       └── product-recommend/
+│   │   │           └── SKILL.md   # 商品推荐技能（了解需求→查偏好→搜索→推荐）
+│   │   ├── strategies/            # (upcoming) Agent 执行策略
+│   │   ├── tools/                 # 电商工具集（Function Calling）
+│   │   │   ├── mock_data.py       # Mock 数据：订单、商品、物流
+│   │   │   ├── registry.py        # 本地工具注册表 + OpenAI schema + 分发执行
+│   │   │   ├── manager.py         # ToolManager：统一管理本地 + MCP 工具（支持 allowed_tools 过滤）
+│   │   │   ├── order.py           # 查询订单详情
+│   │   │   ├── product.py         # 搜索商品信息
+│   │   │   ├── logistics.py       # 查询物流轨迹
+│   │   │   ├── refund.py          # 申请退款
+│   │   │   ├── knowledge.py       # search_knowledge：RAG 政策/FAQ 检索
+│   │   │   ├── memory_tool.py     # recall_user_memory：查询用户记忆
+│   │   │   └── skill_tool.py      # load_skill：按需加载技能指令
+│   │   └── rag/                   # RAG 模块
+│   │       ├── chunker.py         # Markdown → Chunk（按二级标题切分）
+│   │       ├── embedder.py        # OpenAI Embeddings 封装
+│   │       ├── retriever.py       # KnowledgeRetriever：query → 向量检索
+│   │       ├── backends/          # 向量后端（可切换）
+│   │       │   ├── base.py        # VectorBackend 抽象接口
+│   │       │   ├── numpy_backend.py   # 手写余弦 + JSON（教学透明，零依赖）
+│   │       │   └── chroma_backend.py  # Chroma 嵌入式向量数据库（生产代表）
+│   │       └── knowledge/         # 知识库源文档（markdown，RAG 数据源）
+│   │           ├── 退换货政策.md
+│   │           ├── 配送说明.md
+│   │           ├── 会员权益.md
+│   │           └── 常见问题FAQ.md
 │   ├── mcp_client/                # MCP Client（同步封装）
 │   │   ├── client.py              # MCPClient：后台线程管理异步连接
 │   │   └── converter.py           # MCP Tool schema → OpenAI function calling 格式
-│   ├── rag/                       # RAG 模块
-│   │   ├── chunker.py             # Markdown → Chunk（按二级标题切分）
-│   │   ├── embedder.py            # OpenAI Embeddings 封装
-│   │   ├── retriever.py           # KnowledgeRetriever：query → 向量检索
-│   │   └── backends/              # 向量后端（可切换）
-│   │       ├── base.py            # VectorBackend 抽象接口
-│   │       ├── numpy_backend.py   # 手写余弦 + JSON（教学透明，零依赖）
-│   │       └── chroma_backend.py  # Chroma 嵌入式向量数据库（生产代表）
 │   ├── evaluation/                # Agent 评估体系（第9期）
 │   │   ├── __init__.py            # 导出 EvalCase / Sandbox / Evaluator / RunTrace 等
 │   │   ├── dataset.py             # EvalCase 数据结构 + load_dataset
@@ -136,18 +148,6 @@ ecom-service-agent/
 │   │   ├── router.py              # 意图路由器（LLM 分类 → 子 Agent）
 │   │   ├── agents.py              # SubAgent 子 Agent 类 + 配置
 │   │   └── orchestrator.py        # 编排器：路由 → 执行 → 结构化提取（集成 MemoryManager + SkillManager）
-│   ├── skills/                    # Skill 技能内容（第8期，遵循 Agent Skills 开放标准）
-│   │   ├── process-return/
-│   │   │   └── SKILL.md           # 退货退款处理技能（确认订单→校验资格→退款→告知进度）
-│   │   ├── track-order/
-│   │   │   └── SKILL.md           # 订单物流跟踪技能（查单→查物流→综合建议）
-│   │   └── product-recommend/
-│   │       └── SKILL.md           # 商品推荐技能（了解需求→查偏好→搜索→推荐）
-│   ├── knowledge/                 # 知识库源文档（markdown）
-│   │   ├── 退换货政策.md
-│   │   ├── 配送说明.md
-│   │   ├── 会员权益.md
-│   │   └── 常见问题FAQ.md
 │   ├── scripts/
 │   │   ├── build_kb_index.py      # 离线构建知识库索引（--backend numpy/chroma）
 │   │   └── run_eval.py            # 离线运行评估（--mode single/multi · --judge/--no-judge · --output）

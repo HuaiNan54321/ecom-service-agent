@@ -69,7 +69,7 @@ def _parse_body(content: str) -> str:
 class SkillManager:
     """Skill 管理器：发现、注册、加载 Skills。"""
 
-    def __init__(self, skills_dir: str = "app/skills", enabled: bool = True):
+    def __init__(self, skills_dir: str = "app/agent/skills/definitions", enabled: bool = True):
         self.skills_dir = Path(skills_dir)
         self.enabled = enabled
         self._skills: dict[str, SkillMeta] = {}

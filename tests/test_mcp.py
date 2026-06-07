@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from app.mcp_client import MCPClient  # noqa: E402
-from app.tools.manager import ToolManager  # noqa: E402
+from app.agent.tools.manager import ToolManager  # noqa: E402
 from app.agent.chat import EcomAgent  # noqa: E402
 from app.schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
 

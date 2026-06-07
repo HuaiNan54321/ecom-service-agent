@@ -1,4 +1,4 @@
-from app.tools.mock_data import ORDERS
+from app.agent.tools.mock_data import ORDERS
 
 STATUS_LABELS = {
     "pending": "待发货",
