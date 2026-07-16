@@ -13,6 +13,62 @@
 
 ---
 
+## 快速开始（Quick Start）
+
+跑起来只需要一个 OpenAI API Key，5 分钟即可看到「小夕」上线对话。
+
+```bash
+# 1. 进入项目并创建虚拟环境（Python 3.11+）
+cd ecom-service-agent
+python3.11 -m venv .venv && source .venv/bin/activate
+
+# 2. 安装依赖
+pip install -r requirements.txt
+
+# 3. 配置 API Key
+cp .env.example .env
+# 编辑 .env，至少填入：
+#   OPENAI_API_KEY=sk-你的key
+#   （可选）OPENAI_BASE_URL=https://... 如用中转/代理
+#   （可选）MODEL_NAME=gpt-4o-mini
+
+# 4. 构建知识库索引（RAG 检索需要，首次运行一次即可）
+python -m app.scripts.build_kb_index
+
+# 5. 启动对话
+python main.py
+```
+
+启动后直接输入问题即可，试试这些：
+
+- `我的订单还没发货，怎么回事？` —— 触发订单 + 物流查询
+- `有没有宽松透气的裤子推荐？` —— 触发商品推荐技能
+- `这件衣服质量有问题，我要退货` —— 触发退货退款流程
+
+每条回复底部会显示 `[意图 | 置信度 | 是否转人工]`。对话中还支持这些命令：
+
+| 命令 | 作用 |
+|------|------|
+| `skills` | 查看已加载的技能模块 |
+| `memory` | 查看短期 / 长期记忆 |
+| `reset` | 清空当前会话 |
+| `quit` / `exit` | 退出 |
+
+**开启进阶能力**（可选，改 `.env` 后重启即可）：
+
+- `MULTI_AGENT_ENABLED=true` —— 多 Agent 协作（售前/售后/投诉分流）
+- `MCP_ENABLED=true` —— 通过 MCP 协议调用工具（需另起 `python mcp_server/server.py`）
+- `RAG_BACKEND=chroma` —— 换用 Chroma 向量数据库（需 `pip install chromadb`）
+
+**跑评估 & 测试**：
+
+```bash
+python -m app.scripts.run_eval        # 离线评估（沙箱重跑黄金测试集 + LLM judge）
+pytest                                # 运行全部单元测试
+```
+
+---
+
 ## 背景
 
 大家好，我是淮南，Top 985科班出身，有多家大厂后端 & AI Agent 研发经验。
