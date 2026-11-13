@@ -1,0 +1,233 @@
+.gitignore
+  s_a75afaffde057e::t_d93adfc38e271c 33-36
+README.md
+  s_a75afaffde057e::t_776a60c7151829 16-31,82,224-225
+examples/README.md
+  s_a75afaffde057e::t_20a2872553ff77 1-225
+examples/__init__.py
+  s_a75afaffde057e::t_47e99bd6434e8f 1
+examples/appendix_a/__init__.py
+  s_a75afaffde057e::t_4b9541954f6b87 1
+examples/appendix_a/demo.py
+  s_a75afaffde057e::t_291687cd66504d 1-59
+examples/appendix_b/__init__.py
+  s_a75afaffde057e::t_ac017599322255 1
+examples/appendix_b/demo.py
+  s_a75afaffde057e::t_3f77568db04028 1-64
+examples/appendix_c/__init__.py
+  s_a75afaffde057e::t_9d7153b2b5839d 1
+examples/appendix_c/diagnose.py
+  s_a75afaffde057e::t_ce98157abb8acd 1-30
+examples/ch01/__init__.py
+  s_a75afaffde057e::t_6e202b6022fcd1 1
+examples/ch01/demo.py
+  s_a75afaffde057e::t_c52a81e8be841b 1-25
+examples/ch02/__init__.py
+  s_a75afaffde057e::t_be684125024a45 1
+examples/ch02/demo.py
+  s_a75afaffde057e::t_78f0f2fd295456 1-63
+examples/ch02/requirements.txt
+  s_a75afaffde057e::t_1b90a7899e42d7 1-2
+examples/ch02/tokenizer_demo.py
+  s_a75afaffde057e::t_c43d43318a597f 1-41
+examples/ch03/__init__.py
+  s_a75afaffde057e::t_6b39c21be4e264 1
+examples/ch03/demo.py
+  s_a75afaffde057e::t_aabf454f5ecb3c 1-58
+examples/ch04/__init__.py
+  s_a75afaffde057e::t_1555f608a83b8c 1
+examples/ch04/demo.py
+  s_a75afaffde057e::t_230a8728d381a2 1-56
+examples/ch05/__init__.py
+  s_a75afaffde057e::t_69d5aef2204431 1
+examples/ch05/demo.py
+  s_a75afaffde057e::t_981a56a6b29ada 1-105
+examples/ch05/test_http.py
+  s_a75afaffde057e::t_40c8da31811ef2 1-131
+examples/ch06/__init__.py
+  s_a75afaffde057e::t_fbe54ce003af51 1
+examples/ch06/demo.py
+  s_a75afaffde057e::t_3a28f52cd742e2 1-63
+examples/ch07/__init__.py
+  s_a75afaffde057e::t_7abf6db7c712e4 1
+examples/ch07/demo.py
+  s_a75afaffde057e::t_1c0c12f0d8c2d7 1-121
+examples/ch08/__init__.py
+  s_a75afaffde057e::t_2406757db096a0 1
+examples/ch08/demo.py
+  s_a75afaffde057e::t_45db53f04d9758 1-65
+examples/ch09/__init__.py
+  s_a75afaffde057e::t_a3b4046f54ecaf 1
+examples/ch09/demo.py
+  s_a75afaffde057e::t_7033ac830dda8d 1-152
+examples/ch09/test_demo.py
+  s_a75afaffde057e::t_712ce91de9fe8d 1-53
+examples/ch10/__init__.py
+  s_a75afaffde057e::t_0fd21f0e3fc01c 1
+examples/ch10/demo.py
+  s_a75afaffde057e::t_91c70571749f38 1-106
+examples/ch10/test_demo.py
+  s_a75afaffde057e::t_0a12761bca9fd9 1-60
+examples/ch11/__init__.py
+  s_a75afaffde057e::t_b03d0708444823 1
+examples/ch11/demo.py
+  s_a75afaffde057e::t_c80deb86bf074e 1-42
+examples/ch11/test_demo.py
+  s_a75afaffde057e::t_13b7794b07771a 1-26
+examples/ch12/__init__.py
+  s_a75afaffde057e::t_65b80d7a904ff9 1
+examples/ch12/demo.py
+  s_a75afaffde057e::t_0011f223c7d656 1-80
+examples/ch12/test_demo.py
+  s_a75afaffde057e::t_d0bbda07b64cd9 1-42
+examples/ch13/README.md
+  s_a75afaffde057e::t_29902fce38321c 1-17
+examples/ch13/__init__.py
+  s_a75afaffde057e::t_f47dc60734a040 1
+examples/ch13/demo.py
+  s_a75afaffde057e::t_9381d591b1c60c 1-78
+examples/ch13/embeddings.py
+  s_a75afaffde057e::t_5bd16c38af6d0c 1-78
+examples/ch13/test_demo.py
+  s_a75afaffde057e::t_d19c5f1a9cc35d 1-52
+examples/ch14/README.md
+  s_a75afaffde057e::t_5ca8cab47cf802 1-11
+examples/ch14/__init__.py
+  s_a75afaffde057e::t_4a5ea4a06a9e7c 1
+examples/ch14/demo.py
+  s_a75afaffde057e::t_a3ca917eeda453 1-75
+examples/ch15/README.md
+  s_a75afaffde057e::t_3648813caa915b 1-12
+examples/ch15/__init__.py
+  s_a75afaffde057e::t_55b24ab7fea49f 1
+examples/ch15/demo.py
+  s_a75afaffde057e::t_16de4d274653c2 1-124
+examples/ch15/test_demo.py
+  s_a75afaffde057e::t_d9b694584bd04c 1-25
+examples/ch16/README.md
+  s_a75afaffde057e::t_9e0d789b048022 1-11
+examples/ch16/__init__.py
+  s_a75afaffde057e::t_3d0c57da7fb913 1
+examples/ch16/demo.py
+  s_a75afaffde057e::t_b860e96c44caa7 1-65
+examples/ch16/skills/logistics-guide/SKILL.md
+  s_a75afaffde057e::t_5d1f0ce84c6af5 1-11
+examples/ch16/skills/return-guide/SKILL.md
+  s_a75afaffde057e::t_2604599ead05bc 1-14
+examples/ch17/__init__.py
+  s_a75afaffde057e::t_77bcb0fee16117 1
+examples/ch17/dataset.py
+  s_a75afaffde057e::t_41541a9af6f99e 1-85
+examples/ch17/demo.py
+  s_a75afaffde057e::t_beee975c7c0026 1-23
+examples/ch18/__init__.py
+  s_a75afaffde057e::t_a6aceb52683073 1
+examples/ch18/demo.py
+  s_a75afaffde057e::t_c3fd36767ef405 1-43
+examples/ch18/scoring.py
+  s_a75afaffde057e::t_66ded599bf98fd 1-74
+examples/ch19/__init__.py
+  s_a75afaffde057e::t_a81ea3a0ac9e83 1
+examples/ch19/demo.py
+  s_a75afaffde057e::t_a57bc44370f83a 1-93
+examples/ch19/metrics.py
+  s_a75afaffde057e::t_0d17d573944160 1-43
+examples/ch19/test_demo.py
+  s_a75afaffde057e::t_822df9dcfcd4fb 1-112
+examples/ch20/__init__.py
+  s_a75afaffde057e::t_5eafb8f37e51a0 1
+examples/ch20/demo.py
+  s_a75afaffde057e::t_1a97c904fe01f1 1-52
+examples/ch20/runner.py
+  s_a75afaffde057e::t_5c8fc263b7ab3e 1-92
+examples/ch21/__init__.py
+  s_a75afaffde057e::t_163a300fe38ee7 1
+examples/ch21/demo.py
+  s_a75afaffde057e::t_71575860e1ff6e 1-47
+examples/ch21/requirements.txt
+  s_a75afaffde057e::t_dbc81d1ce58e0a 1-2
+examples/ch21/server.py
+  s_a75afaffde057e::t_1fa2587ea5445c 1-32
+examples/ch22/__init__.py
+  s_a75afaffde057e::t_5a001d2ce0b6c1 1
+examples/ch22/demo.py
+  s_a75afaffde057e::t_fc9ba9f2a089b4 1-95
+examples/ch22/test_demo.py
+  s_a75afaffde057e::t_0cfb7869eb8e66 1-49
+examples/ch23/__init__.py
+  s_a75afaffde057e::t_9d8cf19f9a004e 1
+examples/ch23/demo.py
+  s_a75afaffde057e::t_2fe1b694252281 1-91
+examples/ch24/__init__.py
+  s_a75afaffde057e::t_582339db1cabe9 1
+examples/ch24/a2a_card.json
+  s_a75afaffde057e::t_87908ddd2e0dac 1-14
+examples/ch24/demo.py
+  s_a75afaffde057e::t_f18608d14824ff 1-92
+examples/ch25/__init__.py
+  s_a75afaffde057e::t_0d5d56f07df8e2 1
+examples/ch25/demo.py
+  s_a75afaffde057e::t_56ee681d202084 1-26
+examples/ch25/strategy.py
+  s_a75afaffde057e::t_529147df660e25 1-74
+examples/ch26/__init__.py
+  s_a75afaffde057e::t_f0e55963e531e9 1
+examples/ch26/demo.py
+  s_a75afaffde057e::t_38dfe58428531c 1-77
+examples/ch27/__init__.py
+  s_a75afaffde057e::t_41222ccb4ee12f 1
+examples/ch27/demo.py
+  s_a75afaffde057e::t_672e0c117e68b0 1-115
+examples/ch28/__init__.py
+  s_a75afaffde057e::t_c4af6114d10f9e 1
+examples/ch28/demo.py
+  s_a75afaffde057e::t_e919924ab949ac 1-119
+examples/ch28/test_pipeline.py
+  s_a75afaffde057e::t_a2a3995b05ea52 1-95
+examples/ch29/__init__.py
+  s_a75afaffde057e::t_dce9ae0c3412a2 1
+examples/ch29/demo.py
+  s_a75afaffde057e::t_c9f26192ef69b8 1-89
+examples/ch30/__init__.py
+  s_a75afaffde057e::t_71f9d495227ecc 1
+examples/ch30/demo.py
+  s_a75afaffde057e::t_6fc0c52f22c7cc 1-69
+examples/ch30/page.html
+  s_a75afaffde057e::t_ce926f144be243 1-9
+examples/ch31/__init__.py
+  s_a75afaffde057e::t_e89754e126d3ef 1
+examples/ch31/demo.py
+  s_a75afaffde057e::t_6ea5ded50dff51 1-77
+examples/ch31/requirements-framework.txt
+  s_a75afaffde057e::t_faa3aeeaa0d26c 1-2
+examples/ch32/__init__.py
+  s_a75afaffde057e::t_eedc4c97814163 1
+examples/ch32/demo.py
+  s_a75afaffde057e::t_ffeb91e8847b54 1-66
+examples/common/__init__.py
+  s_a75afaffde057e::t_64f39f73f9de30 1-5
+examples/common/llm.py
+  s_a75afaffde057e::t_0c36b9334bd4a9 1-195
+examples/common/sandbox.py
+  s_a75afaffde057e::t_ca5a6e83adb731 1-168
+examples/common/test_common.py
+  s_a75afaffde057e::t_8277a80495df2d 1-212
+requirements.txt
+  s_a75afaffde057e::t_485861ec62b4c8 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "c0983e74e4f2b5649847a133072ae44f924bf022",
+  "prompts": {},
+  "sessions": {
+    "s_a75afaffde057e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d3b6-5e26-75e0-8f9f-d33c5946ed0c",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "HuaiNan <amy095200@gmail.com>"
+    }
+  }
+}
