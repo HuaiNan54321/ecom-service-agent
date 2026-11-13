@@ -13,6 +13,22 @@
 
 ---
 
+## 图解教材的原理实验
+
+《大模型与Agent原理图解：基础、实践与进阶》的示例统一位于本仓库 `examples/`，下载这一份仓库即可跟随 PDF 操作。使用 Python 3.11+，从仓库根目录、激活后的虚拟环境运行：
+
+```bash
+python -m examples.ch01.demo
+python -m examples.ch09.demo
+python -m examples.appendix_c.diagnose
+```
+
+除第 21 章本地 MCP 示例外，默认入口只依赖标准库，使用合成数据或明确标记的预设响应，不需要 API Key。完整入口、三种可选依赖、显式 `--live` 配置与系统边界见 [examples/README.md](examples/README.md)。实验使用 `AGENTBOOK_*` 环境变量且不自动读 `.env`；下面的主应用使用 `OPENAI_*` / `MODEL_NAME` 配置，运行对话和评测可能调用真实模型。
+
+`examples.common.Sandbox` 是独立实验状态环境，与 `app.evaluation.Sandbox` 的真实 Agent 插桩器不同。实验中的身份隔离、退款幂等、快照恢复、自进化报告不是主应用已经接入的业务功能。主系统 MCP v1 与第 21 章 MCP v2.3 必须使用独立虚拟环境。
+
+---
+
 ## 快速开始（Quick Start）
 
 跑起来只需要一个 OpenAI API Key，5 分钟即可看到「小夕」上线对话。
@@ -63,7 +79,7 @@ python main.py
 **跑评估 & 测试**：
 
 ```bash
-python -m app.scripts.run_eval        # 离线评估（沙箱重跑黄金测试集 + LLM judge）
+python -m app.scripts.run_eval        # 批量评估；被测 Agent 仍调用模型，--no-judge 只关闭裁判
 pytest                                # 运行全部单元测试
 ```
 
@@ -205,8 +221,8 @@ ecom-service-agent/
 │   │   ├── agents.py              # SubAgent 子 Agent 类 + 配置
 │   │   └── orchestrator.py        # 编排器：路由 → 执行 → 结构化提取（集成 MemoryManager + SkillManager）
 │   ├── scripts/
-│   │   ├── build_kb_index.py      # 离线构建知识库索引（--backend numpy/chroma）
-│   │   └── run_eval.py            # 离线运行评估（--mode single/multi · --judge/--no-judge · --output）
+│   │   ├── build_kb_index.py      # 构建本地索引，嵌入可能调用 API（--backend numpy/chroma）
+│   │   └── run_eval.py            # 批量评估，被测 Agent 仍调用模型（--no-judge 只关闭裁判）
 │   └── sessions/                  # 运行时生成，已 .gitignore
 │       ├── session.json           # 当前会话快照
 │       ├── kb_index.json          # NumpyBackend 索引

@@ -30,3 +30,7 @@ env/
 
 # 会话持久化文件
 app/sessions/
+
+# 各章独立虚拟环境与实验输出
+.venv*/
+runs/

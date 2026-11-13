@@ -1,0 +1,14 @@
+{
+  "name": "教学政策说明 Agent",
+  "description": "用于阅读 A2A 1.0 字段的虚构 Agent Card，没有部署对应服务。",
+  "version": "1.0.0",
+  "supportedInterfaces": [
+    {"url": "https://agent.example.invalid/a2a", "protocolBinding": "JSONRPC", "protocolVersion": "1.0"}
+  ],
+  "capabilities": {"streaming": false, "pushNotifications": false},
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [
+    {"id": "explain-policy", "name": "解释教学政策", "description": "根据给定政策组织说明，不提交退款。", "tags": ["教学", "只读"]}
+  ]
+}
