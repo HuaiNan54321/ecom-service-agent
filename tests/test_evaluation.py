@@ -181,7 +181,9 @@ def test_judges():
         "您的订单已由顺丰速运承运，目前正在上海浦东区派送中，预计很快送达。",
         ["顺丰"],
     )
-    if score >= 3:
+    if score is None:
+        print(f"  ⚠️  质量裁判未评分：{reason}")
+    elif score >= 3:
         _ok(f"好回复质量评分 {score:.0f}（{reason}）")
     else:
         print(f"  ⚠️  好回复评分偏低 {score:.0f}（模型差异，非致命）: {reason}")

@@ -10,18 +10,18 @@
 
 代码规则评分统一约定：返回 float | None。None 表示该用例未指定此维度（如问候用例
 没有 expected_tools），聚合时应跳过而不是记 0，避免拖垮均值。
-LLM judge 仿照 app/agent/memory/extraction.py 的「格式化 → 调用 LLM → 解析 JSON」
-自由函数风格，temperature=0.0，解析失败有兜底返回。
+语言裁判使用独立量表和逐字引文；缺少证据、协议错误、接口异常时返回待复核原因。
 """
 
 from __future__ import annotations
 
 import json
 
-from openai import OpenAI
+from openai import APIError, OpenAI
 
 from app.prompts.evaluation import (
     ANSWER_QUALITY_PROMPT,
+    BUSINESS_CLAIM_PROMPT,
     HALLUCINATION_PROMPT,
     PROCESS_SOUNDNESS_PROMPT,
 )
@@ -53,9 +53,9 @@ def tool_efficiency(min_calls: int | None, actual: int) -> float | None:
     return min(1.0, min_calls / actual)
 
 
-def token_cost_pass(total_tokens: int, budget: int | None) -> bool | None:
-    """token 消耗是否在预算内。budget 为 None 返回 None（不设上限）。"""
-    if budget is None:
+def token_cost_pass(total_tokens: int | None, budget: int | None) -> bool | None:
+    """未设预算或缺少用量时返回未知。"""
+    if budget is None or total_tokens is None:
         return None
     return total_tokens <= budget
 
@@ -92,97 +92,70 @@ def requires_human_match(expected: bool | None, actual: bool) -> float | None:
     return 1.0 if expected == actual else 0.0
 
 
-# ============================================================
-# LLM judge 共用：解析 JSON（剥离可能的 ```代码块）
-# ============================================================
-def _parse_json(raw: str) -> dict:
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-    return json.loads(raw)
-
-
-# ============================================================
-# 结果指标（LLM judge）
-# ============================================================
-def judge_answer_quality(
-    client: OpenAI,
-    model: str,
-    user_input: str,
-    reply: str,
-    reference: list[str] | None = None,
-) -> tuple[float, str]:
-    """回答质量 judge：返回 (score 1-5, reason)。解析失败返回 (0.0, 原因)。"""
-    ref_text = "、".join(reference) if reference else "（无）"
-    prompt = ANSWER_QUALITY_PROMPT.format(
-        user_input=user_input, reply=reply, reference=ref_text
-    )
+def _judge(client, model, rubric, data, evidence, field) -> tuple[float | None, str]:
+    """校验裁判的分值与原文引用；未知结果连同原因交给人工复核。"""
     try:
         response = client.chat.completions.create(
-            model=model,
-            temperature=0.0,
-            messages=[{"role": "user", "content": prompt}],
+            model=model, temperature=0.0,
+            messages=[{"role": "system", "content": rubric},
+                      {"role": "user", "content": json.dumps({**data, "evidence": evidence}, ensure_ascii=False)}],
         )
-        data = _parse_json(response.choices[0].message.content or "")
-        return float(data["score"]), data.get("reason", "")
-    except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
-        return 0.0, f"质量评分解析失败: {e}"
+        choice = response.choices[0]
+        if choice.finish_reason != "stop" or getattr(choice.message, "refusal", None):
+            return None, "待复核：裁判拒答或回复未完整结束"
+        verdict = json.loads(choice.message.content)
+        if not isinstance(verdict, dict) or field not in verdict:
+            return None, "待复核：裁判缺少结论字段"
+        reason = verdict.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            return None, "待复核：裁判未给出理由"
+        value = verdict[field]
+        if value is None:
+            return None, f"待复核：{reason}"
+        if field in ("faithful", "has_claim"):
+            valid = type(value) is bool
+        else:
+            valid = type(value) is int and 1 <= value <= 5
+        if not valid:
+            return None, "待复核：裁判结论的类型或分值不符合量表"
+        source, quote = verdict.get("source"), verdict.get("quote")
+        if (not isinstance(source, str) or source not in evidence
+                or not isinstance(quote, str) or not quote.strip() or quote not in evidence[source]):
+            return None, "待复核：裁判的来源或引文无法在评审材料中定位"
+        if field == "has_claim" and quote != evidence["reply"]:
+            return None, "待复核：识别业务断言时须引用完整回复"
+        return float(value), f"{reason} [{source}：{quote}]"
+    except APIError as exc:
+        return None, f"待复核：裁判接口异常（{type(exc).__name__}）"
+    except (AttributeError, IndexError, TypeError, ValueError):
+        return None, "待复核：裁判回复格式无效"
 
 
-def judge_faithfulness(
-    client: OpenAI,
-    model: str,
-    reply: str,
-    observations: list[ToolObservation],
-) -> tuple[float, str]:
-    """幻觉检测 judge：对照工具返回核查 reply 是否忠实。
-
-    返回 (1.0 忠实 / 0.0 有幻觉, reason)。解析失败返回 (0.0, 原因)。
-    """
-    if observations:
-        obs_text = "\n".join(
-            f"- {obs.name}({obs.arguments}) → {obs.result}" for obs in observations
-        )
-    else:
-        obs_text = "（本次会话未调用任何工具）"
-    prompt = HALLUCINATION_PROMPT.format(reply=reply, observations=obs_text)
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            temperature=0.0,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        data = _parse_json(response.choices[0].message.content or "")
-        faithful = bool(data["faithful"])
-        return (1.0 if faithful else 0.0), data.get("reason", "")
-    except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
-        return 0.0, f"幻觉检测解析失败: {e}"
+def judge_answer_quality(client: OpenAI, model: str, user_input: str, reply: str,
+                         reference: list[str] | None = None) -> tuple[float | None, str]:
+    """评阅回答的清晰与完整程度，保留作为评分依据的回复原文。"""
+    return _judge(client, model, ANSWER_QUALITY_PROMPT,
+                  {"question": user_input, "reference": reference or []}, {"reply": reply}, "score")
 
 
-# ============================================================
-# 过程指标（LLM judge）
-# ============================================================
-def judge_process_soundness(
-    client: OpenAI,
-    model: str,
-    user_input: str,
-    tool_sequence: list[str],
-) -> tuple[float, str]:
-    """推理过程合理性 judge：判断工具选择/顺序是否合理。
+def judge_faithfulness(client: OpenAI, model: str, reply: str,
+                       observations: list[ToolObservation]) -> tuple[float | None, str]:
+    """核对业务断言，事实引文必须出自实际工具返回。"""
+    evidence = {f"T{i}": obs.result for i, obs in enumerate(observations, 1)}
+    if not evidence:
+        return None, "待复核：本次没有工具返回可供核查"
+    tools = {f"T{i}": obs.name for i, obs in enumerate(observations, 1)}
+    return _judge(client, model, HALLUCINATION_PROMPT,
+                  {"reply": reply, "tools": tools}, evidence, "faithful")
 
-    返回 (score 1-5, reason)。解析失败返回 (0.0, 原因)。
-    """
-    seq_text = " → ".join(tool_sequence) if tool_sequence else "（未调用任何工具）"
-    prompt = PROCESS_SOUNDNESS_PROMPT.format(
-        user_input=user_input, tool_sequence=seq_text
-    )
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            temperature=0.0,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        data = _parse_json(response.choices[0].message.content or "")
-        return float(data["score"]), data.get("reason", "")
-    except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
-        return 0.0, f"过程评分解析失败: {e}"
+
+def judge_process_soundness(client: OpenAI, model: str, user_input: str,
+                            tool_sequence: list[str]) -> tuple[float | None, str]:
+    """评阅工具选择与先后次序，工具名按实际调用逐项编号。"""
+    evidence = {"question": user_input, **{f"T{i}": name for i, name in enumerate(tool_sequence, 1)}}
+    return _judge(client, model, PROCESS_SOUNDNESS_PROMPT, {"tool_sequence": tool_sequence}, evidence, "score")
+
+
+def judge_greeting_claim(client: OpenAI, model: str, reply: str) -> tuple[float | None, str]:
+    """在无工具的问候题上识别答复中额外添加的业务断言。"""
+    return _judge(client, model, BUSINESS_CLAIM_PROMPT, {}, {"reply": reply}, "has_claim")

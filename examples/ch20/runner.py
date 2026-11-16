@@ -1,4 +1,4 @@
-"""固定策略执行器：比较程序开关，而不是伪装成真实模型评测。"""
+"""在相同的客服任务上比较两套确定性程序策略。"""
 
 from copy import deepcopy
 from time import perf_counter
@@ -73,12 +73,13 @@ def run_task(task, policy="checked"):
                 answer = {"status": "submitted", "text": "系统中已记录退款申请，尚未代表到账。", "facts": result.get("refund", {})}
             else:
                 answer = {"status": "answered", "text": "以下为工具返回的记录。", "facts": result.get("order", result.get("logistics", {}))}
+    elapsed_ms = round((perf_counter() - started) * 1000, 3)
     after = env.snapshot()
     verdict = grade(task, before, after, trace, answer)
     return {"task_id": task["id"], "family": task["family"], "split": task["split"],
             **verdict, "tool_calls": len(trace), "trace": trace, "answer": answer,
             "initial_state": before, "final_state": after,
-            "elapsed_ms": round((perf_counter() - started) * 1000, 3)}
+            "elapsed_ms": elapsed_ms}
 
 
 def run_suite(tasks, policy="checked"):
@@ -87,6 +88,22 @@ def run_suite(tasks, policy="checked"):
         raise ValueError("评测任务不能为空")
     rows = [run_task(task, policy) for task in tasks]
     passed = sum(row["passed"] for row in rows)
+    tool_calls = sum(row["tool_calls"] for row in rows)
+    pass_at_1 = passed / len(rows)
     return {"mode": "deterministic_policy", "total": len(rows), "passed": passed,
-            "rate": passed / len(rows), "tool_calls": sum(row["tool_calls"] for row in rows),
+            "rate": pass_at_1, "pass_at_1": pass_at_1, "tool_calls": tool_calls,
+            "mean_tool_calls": tool_calls / len(rows),
             "model_calls": 0, "input_tokens": None, "output_tokens": None, "rows": rows}
+
+
+def paired_changes(baseline, candidate):
+    """按任务编号配对，只在两边都完整且每题各跑一次时计算差异。"""
+    old = {row["task_id"]: row["passed"] for row in baseline["rows"]}
+    new = {row["task_id"]: row["passed"] for row in candidate["rows"]}
+    if (not old or old.keys() != new.keys()
+            or len(old) != len(baseline["rows"]) or len(new) != len(candidate["rows"])):
+        raise ValueError("两组须使用同一批非空任务，每个任务编号各出现一次")
+    improved = sorted(key for key in old if not old[key] and new[key])
+    regressions = sorted(key for key in old if old[key] and not new[key])
+    return {"improved": improved, "regressions": regressions,
+            "delta_pp": 100 * (len(improved) - len(regressions)) / len(old)}

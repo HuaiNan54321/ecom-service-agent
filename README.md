@@ -80,8 +80,15 @@ python main.py
 
 ```bash
 python -m app.scripts.run_eval        # 批量评估；被测 Agent 仍调用模型，--no-judge 只关闭裁判
+python -m examples.ch20.demo --output runs/ch20.json   # 离线比较两种固定策略，核对业务状态
+python -m examples.ch19.judge --output runs/ch20-judge.json   # 用同一笔退款练习核对文本与代码两种判定
+python -m app.scripts.run_eval --mode single --compare-bare --no-judge --output runs/live-comparison.json
 pytest                                # 运行全部单元测试
 ```
+
+最后一条评测命令需要配置模型。它给无工具基线和实际单 Agent 相同的模型、用户消息及任务，各自从新会话开始。模型是否能访问本地订单工具，就是两套系统的能力差异之一。每题首次尝试的答复按预先指定的意图、关键词覆盖率、转人工标记计分。报告列出每条规则的覆盖题数，以及具体哪些题新通过、哪些题退步。单次异常留在分母并单列；若大量请求因模型服务出错，先处理配置再看通过率。
+
+平均工具调用、每题耗时和聊天模型 token 单列对照。token 根据对话接口返回的 usage 汇总，不含检索的嵌入调用；任何题缺少完整用量，整组 token 均值就记为 null，并报告完整记录题数。需要核对“退款申请是否实际写入”，可运行上面的离线实验，查看同一笔订单在执行前后的状态。
 
 ---
 

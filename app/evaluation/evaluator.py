@@ -25,7 +25,7 @@ class EvalResult:
     # ---------- 过程指标 ----------
     tool_accuracy: float | None = None
     tool_efficiency: float | None = None
-    token_cost: int = 0
+    token_cost: int | None = None
     token_pass: bool | None = None
     process_soundness: float | None = None  # judge 1-5 归一化到 0-1
     route_match: float | None = None
@@ -44,6 +44,8 @@ class EvalResult:
 
     trace: dict = field(default_factory=dict)  # RunTrace 精简快照
     judge_reasons: dict = field(default_factory=dict)  # judge 文字理由
+    judge_review: list[str] = field(default_factory=list)  # 需要人工复核的已启用裁判项
+    judge_not_applicable: list[str] = field(default_factory=list)  # 该题没有可评分对象的裁判项
     error: str | None = None
 
 
@@ -72,10 +74,11 @@ class Evaluator:
 
     def run_case(self, case: EvalCase) -> EvalResult:
         trace = self.sandbox.run(case)
-        res = EvalResult(case_id=case.id, description=case.description, trace=trace.to_dict())
+        res = EvalResult(case_id=case.id, description=case.description,
+                         trace=trace.to_dict(), token_cost=trace.total_tokens)
 
-        if trace.error:
-            res.error = trace.error
+        if trace.error or trace.final_response is None:
+            res.error = trace.error or "运行结束后没有得到客服答复"
             return res
 
         try:
@@ -83,10 +86,7 @@ class Evaluator:
             reply = resp.reply if resp else ""
             actual_intent = resp.intent.value if resp else ""
             actual_human = resp.requires_human if resp else False
-            last_input = case.turns[-1]
             called = trace.tool_call_names
-
-            res.token_cost = trace.total_tokens
 
             # ---------- 过程指标（代码规则）----------
             res.tool_accuracy = metrics.tool_accuracy(case.expected_tools, called)
@@ -103,23 +103,37 @@ class Evaluator:
 
             # ---------- LLM judge ----------
             if self.use_judge:
+                user_input = "\n".join(case.turns)
                 q_score, q_reason = metrics.judge_answer_quality(
-                    self.client, self.model, last_input, reply, case.expected_keywords
+                    self.client, self.model, user_input, reply, case.expected_keywords
                 )
-                res.answer_quality = q_score / 5.0 if q_score else None
+                res.answer_quality = q_score / 5.0 if q_score is not None else None
                 res.judge_reasons["answer_quality"] = q_reason
 
-                f_score, f_reason = metrics.judge_faithfulness(
-                    self.client, self.model, reply, trace.tool_observations
-                )
+                if case.expected_intent == "greeting" and not case.expected_tools and not called:
+                    claim, why = metrics.judge_greeting_claim(self.client, self.model, reply)
+                    f_score = None
+                    if claim == 0.0:
+                        res.judge_not_applicable.append("faithfulness")
+                        f_reason = f"不适用：回复仅为问候，没有业务断言。{why}"
+                    elif claim == 1.0:
+                        f_reason = f"待复核：回复含有业务断言，但没有工具证据。{why}"
+                    else:
+                        f_reason = why
+                else:
+                    f_score, f_reason = metrics.judge_faithfulness(
+                        self.client, self.model, reply, trace.tool_observations
+                    )
                 res.faithfulness = f_score
                 res.judge_reasons["faithfulness"] = f_reason
 
                 p_score, p_reason = metrics.judge_process_soundness(
-                    self.client, self.model, last_input, called
+                    self.client, self.model, user_input, called
                 )
-                res.process_soundness = p_score / 5.0 if p_score else None
+                res.process_soundness = p_score / 5.0 if p_score is not None else None
                 res.judge_reasons["process_soundness"] = p_reason
+                res.judge_review = [name for name in res.judge_reasons
+                                    if getattr(res, name) is None and name not in res.judge_not_applicable]
 
             # ---------- 汇总 ----------
             res.process_score = _avg([
@@ -130,7 +144,7 @@ class Evaluator:
                 res.intent_match, res.keyword_coverage,
                 res.requires_human_match, res.answer_quality, res.faithfulness,
             ])
-            res.passed = self._decide_pass(res)
+            res.passed = self._decide_pass(res) and (case.max_tokens is None or res.token_pass is True)
 
         except Exception as e:  # noqa: BLE001 —— 评分异常隔离到单条用例
             res.error = f"评分异常 {type(e).__name__}: {e}"
@@ -143,7 +157,7 @@ class Evaluator:
 
     def _decide_pass(self, res: EvalResult) -> bool:
         """所有被指定的评分维度都 ≥ 阈值，且 token 不超预算，才算通过。"""
-        if res.error:
+        if res.error or res.judge_review:
             return False
         if res.token_pass is False:
             return False
@@ -158,7 +172,8 @@ class Evaluator:
     def _aggregate(self, results: list[EvalResult]) -> dict:
         total = len(results)
         passed = sum(1 for r in results if r.passed)
-        total_tokens = sum(r.token_cost for r in results)
+        tokens = [r.token_cost for r in results if r.token_cost is not None]
+        total_tokens = sum(tokens) if len(tokens) == total else None
         summary = {
             "total": total,
             "passed": passed,
@@ -166,7 +181,9 @@ class Evaluator:
             "avg_process_score": _avg([r.process_score for r in results]),
             "avg_result_score": _avg([r.result_score for r in results]),
             "total_tokens": total_tokens,
-            "avg_tokens_per_case": total_tokens / total if total else 0,
+            "avg_tokens_per_case": total_tokens / total if total and total_tokens is not None else None,
+            "token_cases_observed": len(tokens),
+            "judge_review_cases": sum(bool(r.judge_review) for r in results),
         }
         return {
             "summary": summary,
@@ -197,6 +214,69 @@ class Evaluator:
                 "result_score": r.result_score,
             },
             "judge_reasons": r.judge_reasons,
+            "judge_review": r.judge_review,
+            "judge_not_applicable": r.judge_not_applicable,
             "trace": r.trace,
             "error": r.error,
         }
+
+
+def run_comparison(cases: list[EvalCase], baseline: Evaluator, candidate: Evaluator) -> dict:
+    """每题每侧各运行一次，结果指标只看双方都可交付的末轮答复。"""
+    if baseline.use_judge or candidate.use_judge or baseline.pass_threshold != candidate.pass_threshold:
+        raise ValueError("配对比较需要共用规则阈值，关闭额外模型裁判")
+    if not cases or len({case.id for case in cases}) != len(cases):
+        raise ValueError("对照数据集应非空，且每道题的编号唯一")
+    for case in cases:
+        if not case.turns or not (case.expected_intent or case.expected_keywords
+                                  or case.expected_requires_human is not None):
+            raise ValueError(f"{case.id} 需要用户输入，并预先指定至少一个答复验收条件")
+
+    results = {"baseline": [], "candidate": []}
+    sides = [("baseline", baseline), ("candidate", candidate)]
+    for index, case in enumerate(cases):
+        # 交替谁先运行，减少服务负载随时间变化带来的固定顺序偏差。
+        for side, evaluator in (sides if index % 2 == 0 else reversed(sides)):
+            row = evaluator.run_case(case)
+            scores = [score for score, required in (
+                (row.intent_match, case.expected_intent is not None),
+                (row.keyword_coverage, bool(case.expected_keywords)),
+                (row.requires_human_match, case.expected_requires_human is not None),
+            ) if required]
+            row.passed = row.error is None and all(
+                score is not None and score >= evaluator.pass_threshold for score in scores
+            )
+            results[side].append(row)
+
+    report = {"result_targets": {
+        case.id: {key: value for key, value in (
+            ("intent_match", case.expected_intent),
+            ("keyword_coverage", case.expected_keywords or None),
+            ("requires_human_match", case.expected_requires_human),
+        ) if value is not None}
+        for case in cases
+    }}
+    report["rule_case_counts"] = {
+        rule: sum(rule in targets for targets in report["result_targets"].values())
+        for rule in ("intent_match", "keyword_coverage", "requires_human_match")
+    }
+    for side, evaluator in sides:
+        rows = results[side]
+        group = evaluator._aggregate(rows)
+        summary = group["summary"]
+        summary.update({
+            "pass_at_1": summary["pass_rate"],
+            "errors": sum(row.error is not None for row in rows),
+            "avg_tool_calls": _avg([row.trace["num_tool_calls"] for row in rows]),
+            "avg_elapsed_ms": _avg([row.trace["elapsed_ms"] for row in rows]),
+        })
+        report[side] = group
+    report["paired"] = {
+        "improved": [a.case_id for a, b in zip(results["baseline"], results["candidate"])
+                     if not a.passed and b.passed],
+        "regressed": [a.case_id for a, b in zip(results["baseline"], results["candidate"])
+                      if a.passed and not b.passed],
+        "delta_pp": 100 * (report["candidate"]["summary"]["pass_at_1"]
+                           - report["baseline"]["summary"]["pass_at_1"]),
+    }
+    return report

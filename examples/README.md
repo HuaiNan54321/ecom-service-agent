@@ -150,10 +150,10 @@ text = result["choices"][0]["message"]["content"]
 | 14 | 检索为什么会错：从相似度到检索改进 | `python -m examples.ch14.demo` |
 | 15 | Memory：哪些信息值得跨会话保留 | `python -m examples.ch15.demo` |
 | 16 | Agent Skills：把操作方法按需交给模型 | `python -m examples.ch16.demo` |
-| 17 | Agent 到底做对了吗：定义任务和评测集 | `python -m examples.ch17.demo` |
-| 18 | 怎样评分：答案、工具轨迹与最终状态 | `python -m examples.ch18.demo` |
-| 19 | 模型裁判可信吗：校准、用户模拟与重复试验 | `python -m examples.ch19.demo` |
-| 20 | 从评分到改进：回归、对照、成本与可观测性 | `python -m examples.ch20.demo` |
+| 17 | 怎样构建 Agent 评测数据集：四种出题渠道 | `python -m examples.ch17.prepare`；加 `--augment` 校验本地生成示例，加 `--live` 由配置的模型出候选题。 |
+| 18 | 评测怎样跑：让基线和 Agent 做同一批题 | `python -m examples.ch20.demo` 比较本地策略；`python -m app.scripts.run_eval --mode single --compare-bare --no-judge` 比较真实模型与客服系统。 |
+| 19 | 评测哪些维度：用工程代码给业务结果和执行过程打分 | `python -m examples.ch18.demo` 核对状态；`python -m examples.ch19.demo` 演示重复试验与区间。 |
+| 20 | 怎样用 LLM Judge 评测客服答复 | `python -m examples.ch19.judge --output runs/ch20-judge.json` 回放可逐句复核的示范评分；加 `--live` 按同一量表逐条调用真实模型。 |
 | 21 | 从一次退货咨询看懂 Agent Harness | 工具调用：`python -m examples.ch09.demo`。有界循环：`python -m examples.ch10.demo`。 |
 | 22 | 长任务如何恢复：让下一次运行接得上 | `python -m examples.ch22.demo` |
 | 23 | 沙箱、审批与安全护栏 | `python -m examples.ch23.demo` |
@@ -199,7 +199,8 @@ MCP 在本轮本地连接中协商到协议版本 `2026-07-28`。SDK 版本与�
 下列目录需自行选择；第 28 章生成报告时要求空目录，避免覆盖既有记录。示例目录仅用于本地教学实验。
 
 ```bash
-python -m examples.ch20.demo --output runs/ch20-report.json
+python -m examples.ch20.demo --output runs/baseline-report.json
+python -m examples.ch19.judge --output runs/ch20-judge.json
 python -m examples.ch27.demo --budget 2 --out runs/ch27
 python -m examples.ch28.demo --out runs/ch28
 ```

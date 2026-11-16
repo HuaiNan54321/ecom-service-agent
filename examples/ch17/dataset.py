@@ -4,12 +4,27 @@ from copy import deepcopy
 from examples.common.sandbox import Sandbox, seed_state
 
 
+# 这份冻结清单按种子的业务场景分组；同一来源的改写或变体沿用其家族。
+FROZEN_FAMILIES = {
+    "dev": ("已发货状态查询", "查询缺少编号", "不存在的订单", "跨用户订单查询", "待发货全额申请",
+            "尚未确认写操作", "金额超过实付", "定制品资格限制", "在途物流查询", "已发货申请提交后丢回包"),
+    "validation": ("另一主体已签收查询", "已发货部分金额申请", "零金额申请", "字符串冒充确认",
+                   "已签收部分申请丢回包", "写入前超时", "查询已有申请", "同请求重复提交",
+                   "已取消状态申请", "物流请求缺少编号"),
+    "test": ("一分钱边界订单", "布尔值冒充整数金额", "未知主体查询", "空白申请理由", "空白订单号",
+             "列表冒充订单号", "已有申请换请求编号", "跨用户物流查询", "查询尚不存在的申请", "同编号换金额冲突"),
+}
+FAMILY_SPLIT = {family: split for split, families in FROZEN_FAMILIES.items() for family in families}
+if len(FAMILY_SPLIT) != sum(map(len, FROZEN_FAMILIES.values())):
+    raise ValueError("同一来源家族在冻结清单中出现了两次")
+
+
 def _task(task_id, family, action, order_id, status, *, user_id="U1001",
           facts=None, confirmed=True, amount_cents=None, reason="不再需要",
           setup=None, refund_count=0, refund_amount=None, error_code=None):
     """把重复字段集中起来，案例差异仍在下面的固定清单中明确列出。"""
     return {
-        "id": task_id, "split": task_id.split("_")[0], "family": family,
+        "id": task_id, "split": FAMILY_SPLIT[family], "family": family,
         "user_id": user_id, "order_id": order_id, "action": action,
         "input": f"教学请求：{action}，订单为 {order_id!r}。",
         "confirmed": confirmed, "amount_cents": amount_cents,

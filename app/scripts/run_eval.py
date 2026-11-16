@@ -1,23 +1,7 @@
-"""离线运行 Agent 评估体系（第9期）。
-
-用法：
-  # 先跑确定性路径（只用代码规则，快、零额外 LLM 开销），验证沙箱与采集
-  python app/scripts/run_eval.py --no-judge
-
-  # 全量评估（含 LLM-as-judge：回答质量 / 幻觉 / 过程合理性）
-  python app/scripts/run_eval.py
-
-  # 评估 Multi-Agent 编排器，并把报告写到文件
-  python app/scripts/run_eval.py --mode multi --output app/sessions/eval_report.json
-
-流程：
-  1. 加载数据集（cases.json）。
-  2. 构建 Sandbox（隔离 session + 关记忆读 + 本地 mock 工具 + 给共享 client 插桩）。
-  3. Evaluator 逐用例：沙箱跑用例 → 过程层 + 结果层双层评分。
-  4. 打印双层报告表格 + token 汇总，可选写入 JSON。
-"""
+"""重放电商客服用例。此入口调用已配置的真实模型，免费离线练习用 examples.ch20.demo。"""
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -29,7 +13,7 @@ from openai import OpenAI  # noqa: E402
 
 from app.config.settings import settings  # noqa: E402
 from app.evaluation.dataset import load_dataset  # noqa: E402
-from app.evaluation.evaluator import Evaluator  # noqa: E402
+from app.evaluation.evaluator import Evaluator, run_comparison  # noqa: E402
 from app.evaluation.sandbox import Sandbox  # noqa: E402
 
 
@@ -54,7 +38,8 @@ def _print_report(report: dict) -> None:
         print(
             f"  {c['case_id']:<22}"
             f"{_fmt(p['tool_accuracy']):>8}{_fmt(p['tool_efficiency']):>8}"
-            f"{p['token_cost']:>8}{_fmt(p['token_pass']):>9}{_fmt(p['process_soundness']):>8}"
+            f"{str(p['token_cost'] if p['token_cost'] is not None else '未知'):>8}"
+            f"{_fmt(p['token_pass']):>9}{_fmt(p['process_soundness']):>8}"
         )
 
     print("\n" + "=" * 78)
@@ -67,6 +52,8 @@ def _print_report(report: dict) -> None:
         if c["error"]:
             print(f"  {c['case_id']:<22}  运行/评分异常: {c['error']}")
             continue
+        if c["judge_review"]:
+            flag = "  待复核：" + "、".join(c["judge_review"])
         print(
             f"  {c['case_id']:<22}"
             f"{_fmt(r['intent_match']):>8}{_fmt(r['keyword_coverage']):>8}"
@@ -79,9 +66,14 @@ def _print_report(report: dict) -> None:
     print("  汇总")
     print("=" * 78)
     print(f"  通过率        : {s['passed']}/{s['total']}  ({s['pass_rate'] * 100:.0f}%)")
+    if s["judge_review_cases"]:
+        print(f"  含待复核裁判项: {s['judge_review_cases']} 题（保留在分母）")
     print(f"  平均过程得分  : {_fmt(s['avg_process_score']).strip()}")
     print(f"  平均结果得分  : {_fmt(s['avg_result_score']).strip()}")
-    print(f"  总 token 消耗 : {s['total_tokens']}（平均每用例 {s['avg_tokens_per_case']:.0f}）")
+    if s["total_tokens"] is None:
+        print(f"  聊天模型用量未知，完整记录 {s['token_cases_observed']}/{s['total']} 题")
+    else:
+        print(f"  聊天模型总 token : {s['total_tokens']}（平均每用例 {s['avg_tokens_per_case']:.0f}）")
 
 
 def main():
@@ -95,16 +87,22 @@ def main():
         default="multi" if settings.multi_agent_enabled else "single",
         help="被测 Agent 模式（默认据 multi_agent_enabled）",
     )
-    parser.add_argument(
-        "--judge", dest="judge", action="store_true", default=settings.eval_use_judge,
+    judge = parser.add_mutually_exclusive_group()
+    judge.add_argument(
+        "--judge", dest="judge", action="store_true", default=None,
         help="启用 LLM-as-judge（默认开）",
     )
-    parser.add_argument(
+    judge.add_argument(
         "--no-judge", dest="judge", action="store_false",
         help="只跑代码规则指标，不调 LLM judge（快、便宜）",
     )
+    parser.add_argument("--compare-bare", action="store_true",
+                        help="同模型无工具基线与选定 Agent 逐题对照，仅用双方共有的结果规则计算 pass@1")
     parser.add_argument("--output", default=None, help="将完整报告写入 JSON 文件")
     args = parser.parse_args()
+    if args.compare_bare and args.judge is True:
+        parser.error("配对评测使用预先指定的规则裁判，请移除 --judge")
+    use_judge = False if args.compare_bare else (settings.eval_use_judge if args.judge is None else args.judge)
 
     dataset_path = ROOT / args.dataset if not Path(args.dataset).is_absolute() else Path(args.dataset)
 
@@ -112,7 +110,7 @@ def main():
     print("  并夕夕 · Agent 评估体系")
     print(f"  模式      : {args.mode}")
     print(f"  数据集    : {dataset_path}")
-    print(f"  LLM judge : {'开启' if args.judge else '关闭（仅规则）'}")
+    print(f"  LLM judge : {'开启' if use_judge else '关闭（仅规则）'}")
     print(f"  裁判模型  : {settings.model_name}")
     print("=" * 78)
 
@@ -133,13 +131,35 @@ def main():
         sandbox=sandbox,
         client=client,
         model=settings.model_name,
-        use_judge=args.judge,
+        use_judge=use_judge,
         pass_threshold=settings.eval_pass_threshold,
     )
-    report = evaluator.run_all(cases)
-
-    print("\n[3/3] 生成评估报告...")
-    _print_report(report)
+    if args.compare_bare:
+        baseline = Evaluator(Sandbox(mode="bare"), client, settings.model_name,
+                             use_judge=False, pass_threshold=settings.eval_pass_threshold)
+        report = run_comparison(cases, baseline, evaluator)
+        report["protocol"] = {
+            "model": settings.model_name, "temperature": settings.temperature,
+            "baseline_mode": "bare", "candidate_mode": args.mode,
+            "dataset_sha256": hashlib.sha256(dataset_path.read_bytes()).hexdigest(),
+            "result_rules": ["intent_match", "keyword_coverage", "requires_human_match"],
+            "dimension_threshold": settings.eval_pass_threshold, "attempts_per_case": 1,
+            "token_scope": "客服对话模型用量，不含检索嵌入；供应商未返回完整用量时汇总为 null",
+        }
+        print("\n[3/3] 每题首次尝试的答复通过率与过程成本")
+        for key, name in [("baseline", "裸模型"), ("candidate", args.mode)]:
+            s = report[key]["summary"]
+            tokens = s["avg_tokens_per_case"]
+            token_text = f"{tokens:.1f}" if tokens is not None else f"未知（完整记录 {s['token_cases_observed']}/{s['total']} 题）"
+            print(f"  {name}: {s['passed']}/{s['total']}，pass@1={s['pass_at_1']:.1%}，"
+                  f"平均工具调用 {s['avg_tool_calls']:.2f} 次，平均聊天 token {token_text}，"
+                  f"平均用时 {s['avg_elapsed_ms']:.0f} ms，异常 {s['errors']} 题")
+        print(f"  通过率变化 {report['paired']['delta_pp']:+.1f} 个百分点")
+        print(f"  新通过 {report['paired']['improved']}，退步 {report['paired']['regressed']}")
+    else:
+        report = evaluator.run_all(cases)
+        print("\n[3/3] 生成评估报告...")
+        _print_report(report)
 
     if args.output:
         out_path = ROOT / args.output if not Path(args.output).is_absolute() else Path(args.output)

@@ -20,11 +20,12 @@ class LLMCallRecord:
 
     purpose: str  # 启发式标注：router / react / extract
     model: str
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
+    prompt_tokens: int | None
+    completion_tokens: int | None
+    total_tokens: int | None
     tool_calls: list[dict] = field(default_factory=list)  # 本次响应请求的工具 [{name, arguments}]
     latency_ms: float = 0.0
+    error: str | None = None
 
 
 @dataclass
@@ -47,10 +48,14 @@ class RunTrace:
     llm_calls: list[LLMCallRecord] = field(default_factory=list)
     tool_observations: list[ToolObservation] = field(default_factory=list)
     error: str | None = None  # 运行异常信息，None=正常
+    elapsed_ms: float | None = None  # 本次用例从创建执行器到末轮结束的耗时，不含评分
 
     # ---------- 便捷聚合属性 ----------
     @property
-    def total_tokens(self) -> int:
+    def total_tokens(self) -> int | None:
+        """任一对话调用缺少用量时整题记为未知；确实没有调用时为零。"""
+        if any(c.total_tokens is None for c in self.llm_calls):
+            return None
         return sum(c.total_tokens for c in self.llm_calls)
 
     @property
@@ -77,6 +82,7 @@ class RunTrace:
             "intent": resp.intent.value if resp else None,
             "requires_human": resp.requires_human if resp else None,
             "total_tokens": self.total_tokens,
+            "elapsed_ms": self.elapsed_ms,
             "num_llm_calls": self.num_llm_calls,
             "num_tool_calls": self.num_tool_calls,
             "tool_calls": self.tool_call_names,
