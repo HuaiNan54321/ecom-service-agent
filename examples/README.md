@@ -53,7 +53,7 @@ export AGENTBOOK_API_KEY='读者自己的密钥'
 | Memory | `app/agent/memory/` | 主系统长期记忆使用 JSON；第 15 章 SQLite、版本校验和 TTL 是独立机制实验。 |
 | Skills | `app/agent/skills/loader.py` 与 `definitions/` | 第 16 章使用自己的两份短 Skill，方便观察按需加载与长度变化。 |
 | 评测 | `app/evaluation/`、`app/scripts/run_eval.py` | 主系统 `Sandbox` 是运行真实 Agent 并收集轨迹的插桩器；`examples.common.Sandbox` 是确定性合成状态环境，两者不能互换。`run_eval --no-judge` 仍可能调用 Agent 模型。 |
-| MCP | `mcp_server/server.py`、`app/mcp_client/` | 主系统 MCP v1 使用 HTTP；第 21 章 MCP v2.3 使用独立环境和本机 stdio 子进程。 |
+| MCP | `mcp_server/server.py`、`app/mcp_client/` | 主系统 MCP v1 使用 HTTP；第 9 章 MCP v2.3 实验使用独立环境和本机 stdio 子进程。 |
 | 多 Agent 与优化 | `app/multi_agent/`、`app/agent/strategies/` | 主系统按路由选子 Agent；实验并行汇总、自进化审核和 `active.txt` 不会自动接入 `main.py`。 |
 
 `AGENTBOOK_*` 只属于示例的显式真实调用，不会自动继承主应用的 `.env`。下面的 `Sandbox` 始终指 `examples.common.Sandbox`，所有订单与用户均为独立实验数据。
@@ -130,9 +130,9 @@ text = result["choices"][0]["message"]["content"]
 
 ## 全书入口索引
 
-下表命令均在 ecom-service-agent 仓库根目录执行。第 21 章需要先安装该章 MCP 依赖，其余表中默认入口使用标准库；真实模型调用均需另加该章支持的 `--live`。
+从 ecom-service-agent 仓库根目录运行表中命令。模块名沿用仓库已有目录，例如第 32 章运行 `examples.ch24.demo`。第 9 章的 MCP 实验需先安装该节的可选依赖。
 
-| 章节 | 内容 | 默认入口 |
+| 教材章节 | 内容 | 仓库运行入口 |
 | --- | --- | --- |
 | 01 | 大模型是什么 | `python -m examples.ch01.demo` |
 | 02 | 从文字到 Token：模型怎样生成一句话 | `python -m examples.ch02.demo` |
@@ -142,7 +142,7 @@ text = result["choices"][0]["message"]["content"]
 | 06 | Prompt 怎样写，为什么有效又为什么失效 | `python -m examples.ch06.demo` |
 | 07 | 结构化输出：从一段话到程序可使用的数据 | `python -m examples.ch07.demo` |
 | 08 | 多轮对话：历史、上下文与程序状态 | `python -m examples.ch08.demo` |
-| 09 | Function Calling：模型怎样请求执行函数 | `python -m examples.ch09.demo` |
+| 09 | Function Calling 与 MCP：模型怎样请求工具，应用怎样连接服务 | 本地工具：`python -m examples.ch09.demo`。MCP（9.12）：`python -m examples.ch21.demo`。 |
 | 10 | Workflow、ReAct 与规划：谁决定下一步 | `python -m examples.ch10.demo` |
 | 11 | 工具失败怎么办：可靠执行的基本规则 | `python -m examples.ch11.demo` |
 | 12 | Context Engineering：每次给模型看什么 | `python -m examples.ch12.demo` |
@@ -154,10 +154,10 @@ text = result["choices"][0]["message"]["content"]
 | 18 | 怎样评分：答案、工具轨迹与最终状态 | `python -m examples.ch18.demo` |
 | 19 | 模型裁判可信吗：校准、用户模拟与重复试验 | `python -m examples.ch19.demo` |
 | 20 | 从评分到改进：回归、对照、成本与可观测性 | `python -m examples.ch20.demo` |
-| 21 | MCP：工具怎样从本地函数变成可连接的服务 | `python -m examples.ch21.demo` |
-| 22 | Agent Harness 与长任务：如何中断、恢复和收尾 | `python -m examples.ch22.demo` |
-| 23 | 安全与人工接管：哪些事不能只交给 Prompt | `python -m examples.ch23.demo` |
-| 24 | Multi-Agent 与 A2A：协作什么时候值得 | `python -m examples.ch24.demo` |
+| 21 | 从一次退货咨询看懂 Agent Harness | 工具调用：`python -m examples.ch09.demo`。有界循环：`python -m examples.ch10.demo`。 |
+| 22 | 长任务如何恢复：让下一次运行接得上 | `python -m examples.ch22.demo` |
+| 23 | 沙箱、审批与安全护栏 | `python -m examples.ch23.demo` |
+| 24 | 可观测：沿一次退款的 Trace 找到故障 | 在仓库根目录运行 `python`，执行 24.4 的代码，用 `examples.ch17.dataset.load_tasks` 和 `examples.ch20.runner.run_task` 比较 dev_10 的两种策略。跨进程恢复：`python -m examples.ch22.demo`。 |
 | 25 | 反思、重试与自进化：到底改变了什么 | `python -m examples.ch25.demo` |
 | 26 | 从失败轨迹到经验和 Skills | `python -m examples.ch26.demo` |
 | 27 | 自动优化 Prompt：理解 GEPA 的核心思想 | `python -m examples.ch27.demo` |
@@ -165,7 +165,8 @@ text = result["choices"][0]["message"]["content"]
 | 29 | 什么时候需要训练：SFT、LoRA、DPO 与 Agentic RL | `python -m examples.ch29.demo` |
 | 30 | 多模态、浏览器与计算机操作 Agent | `python -m examples.ch30.demo` |
 | 31 | 原生 API、SDK 与框架：怎样做技术选择 | `python -m examples.ch31.demo` |
-| 32 | 把知识用到新场景：技术地图与源码阅读 | `python -m examples.ch32.demo` |
+| 32 | 多 Agent 协作：路由、委派与 A2A | `python -m examples.ch24.demo` |
+| 33 | 把知识用到新场景：技术地图与源码阅读 | `python -m examples.ch32.demo` |
 | 附录 A | Python 与文件操作 | `python -m examples.appendix_a.demo` |
 | 附录 B | 点积、矩阵与概率 | `python -m examples.appendix_b.demo` |
 | 附录 C | 环境诊断，不打印密钥 | `python -m examples.appendix_c.diagnose` |
@@ -175,12 +176,12 @@ text = result["choices"][0]["message"]["content"]
 
 ## 按章安装可选依赖
 
-不要将下面三项合并成全书必装依赖。先创建、激活对应的虚拟环境，再在该环境中执行安装与运行命令。主系统固定 MCP `<2`，第 21 章固定 `2.3.0`，必须使用不同虚拟环境，不要在主系统环境升级 MCP。Windows 激活后使用 `python`，避免 `py -3.11` 绕过当前环境。
+不要将下面三项合并成全书必装依赖。先创建、激活对应的虚拟环境，再在该环境中执行安装与运行命令。主系统固定 MCP `<2`，第 9 章的 MCP 实验固定 `2.3.0`，必须使用不同虚拟环境，不要在主系统环境升级 MCP。Windows 激活后使用 `python`，避免 `py -3.11` 绕过当前环境。
 
 | 章节 | 本轮固定版本 | 安装与实际用途 |
 | --- | --- | --- |
 | 02 | `tokenizers==0.22.2` | `python -m pip install -r examples/ch02/requirements.txt`；只用于真实分词器，采样 demo 无须它。 |
-| 21 | `mcp==2.3.0` | `python -m pip install -r examples/ch21/requirements.txt`；连接本机 MCP 子进程，不调用模型。 |
+| 09（MCP） | `mcp==2.3.0` | `python -m pip install -r examples/ch21/requirements.txt`；连接本机 MCP 子进程，不调用模型。 |
 | 31 | `langgraph==1.2.21` | `python -m pip install -r examples/ch31/requirements-framework.txt`；仅加 `--langgraph` 时需要。 |
 
 ```bash
@@ -210,7 +211,7 @@ python -m examples.ch28.demo --activate runs/ch28
 python -m examples.ch28.demo --rollback runs/ch28
 ```
 
-第 22 章默认入口已经包含“子进程模拟中断→恢复”的完整演示；中间子进程的约定退出码不是整段演示失败。第 21 章故意调用未知工具时会出现预期错误日志，最终入口退出码与断言结果才是验证结论。
+第 22 章默认入口已经包含“子进程模拟中断→恢复”的完整演示；中间子进程的约定退出码不是整段演示失败。第 9 章的 MCP 实验故意调用未知工具时会出现预期错误日志，最终入口退出码与断言结果才是验证结论。
 
 生成的 `runs/` 目录只保存本地实验报告与策略文件，已加入 Git 忽略规则。第 28 章 `active.txt` 不被主应用读取；采纳与回滚只改变实验文件。
 

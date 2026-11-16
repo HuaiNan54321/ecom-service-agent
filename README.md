@@ -23,9 +23,9 @@ python -m examples.ch09.demo
 python -m examples.appendix_c.diagnose
 ```
 
-除第 21 章本地 MCP 示例外，默认入口只依赖标准库，使用合成数据或明确标记的预设响应，不需要 API Key。完整入口、三种可选依赖、显式 `--live` 配置与系统边界见 [examples/README.md](examples/README.md)。实验使用 `AGENTBOOK_*` 环境变量且不自动读 `.env`；下面的主应用使用 `OPENAI_*` / `MODEL_NAME` 配置，运行对话和评测可能调用真实模型。
+上面三个入口只用标准库，不需要 API Key。第 9 章另有可选的本地 MCP 实验，须在独立环境安装相应依赖。完整入口、三种可选依赖、显式 `--live` 配置与系统边界见 [examples/README.md](examples/README.md)。实验使用 `AGENTBOOK_*` 环境变量且不自动读 `.env`；下面的主应用使用 `OPENAI_*` / `MODEL_NAME` 配置，运行对话和评测可能调用真实模型。
 
-`examples.common.Sandbox` 是独立实验状态环境，与 `app.evaluation.Sandbox` 的真实 Agent 插桩器不同。实验中的身份隔离、退款幂等、快照恢复、自进化报告不是主应用已经接入的业务功能。主系统 MCP v1 与第 21 章 MCP v2.3 必须使用独立虚拟环境。
+`examples.common.Sandbox` 是独立实验状态环境，与 `app.evaluation.Sandbox` 的真实 Agent 插桩器不同。实验中的身份隔离、退款幂等、快照恢复、自进化报告不是主应用已经接入的业务功能。主系统 MCP v1 与第 9 章的 MCP v2.3 实验使用各自的虚拟环境。
 
 ---
 
