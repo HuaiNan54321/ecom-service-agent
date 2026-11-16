@@ -1,0 +1,96 @@
+examples/ch17/prepare.py
+  s_a75afaffde057e::t_85c837f2349347 9,101,104,116-118
+  s_a75afaffde057e::t_569a3827347e3c 96-97,99
+  s_a75afaffde057e::t_ad0d5c82941fac 8,10,13-20,36-53,55-58,70,76,102-103,111-113,115,122
+  s_a75afaffde057e::t_005324a755f11b 1-7,11-12,21-35,54,59-69,71-75,77-81,83,87-95,98,100,105-110,114,119-121,123-130
+  s_a75afaffde057e::t_c179713173ae22 82,84-86
+app/prompts/evaluation.py
+  s_a75afaffde057e::t_44f9cb8a09aab9 1,3-7,10-28
+  s_a75afaffde057e::t_3c8265223bc5ac 29-33
+examples/ch17/test_prepare.py
+  s_a75afaffde057e::t_3e6eeb0e50abf9 3,5,7,9,18,28,44-45,47-63
+  s_a75afaffde057e::t_569a3827347e3c 1-2,4,6,8,10-17,19-27,29-30,33-43,46
+  s_a75afaffde057e::t_c179713173ae22 31-32
+examples/ch17/dataset.py
+  s_a75afaffde057e::t_85c837f2349347 7-21,27
+examples/ch19/test_judge.py
+  s_a75afaffde057e::t_379d430293e22e 1-48
+examples/README.md
+  s_a75afaffde057e::t_9ae21a084f9d0b 153-156,202-203
+app/scripts/run_eval.py
+  s_a75afaffde057e::t_69e1bb7a04fe30 55-56,69-70
+  s_a75afaffde057e::t_9e6ffe32e0ac4c 1,4,16,41-42,73-76,90-92,95,99-100,103-105,113,134,137-162
+examples/ch20/test_demo.py
+  s_a75afaffde057e::t_6ccac4b83d6e0c 5,11-12
+  s_a75afaffde057e::t_5c4a557581212e 1-4,6-10,13-36
+examples/ch20/runner.py
+  s_a75afaffde057e::t_a6df52247c2ed5 1,76,82,91-92,94-95,97-109
+app/evaluation/evaluator.py
+  s_a75afaffde057e::t_088a08c43d297b 241-248
+  s_a75afaffde057e::t_33e970e956109f 80-81
+  s_a75afaffde057e::t_a11943043b3319 47,106,108,110,131,133,160,186,217
+  s_a75afaffde057e::t_9e6ffe32e0ac4c 147
+  s_a75afaffde057e::t_ca6e5cb2144328 251-262
+  s_a75afaffde057e::t_543d26a5c7fa40 28,77-78,175-176,184-185,222-240,249-250,263-282
+  s_a75afaffde057e::t_3c8265223bc5ac 48,113-126,135-136,218
+tests/test_live_comparison.py
+  s_a75afaffde057e::t_323a9a7c845ae6 1-14,18-21,36-86
+  s_a75afaffde057e::t_01dd136b9b2d00 15-17,22-35
+app/evaluation/metrics.py
+  s_a75afaffde057e::t_33e970e956109f 56-58
+  s_a75afaffde057e::t_44f9cb8a09aab9 13,20,95-96,99-101,103-114,116-124,127-156
+  s_a75afaffde057e::t_3c8265223bc5ac 24,115,125-126,157-161
+tests/test_eval_sandbox_comparison.py
+  s_a75afaffde057e::t_cb4f7a2963ce52 18-44,51,54,59,75
+  s_a75afaffde057e::t_828d19eed5f013 15-17
+  s_a75afaffde057e::t_e8513e63264e3f 45-50
+  s_a75afaffde057e::t_b1b40265950913 52-53
+  s_a75afaffde057e::t_d3cce57c6add38 55-58
+  s_a75afaffde057e::t_e1df560106fc1f 60-62,72-74
+  s_a75afaffde057e::t_5f43a42edd6e53 76-78
+app/evaluation/trace.py
+  s_a75afaffde057e::t_5663e8dcb48012 23-25,28,51,55-58,85
+examples/ch20/demo.py
+  s_a75afaffde057e::t_23c3de356e41ec 52-57
+  s_a75afaffde057e::t_24a137a593fb9b 9,21,23-26,36,40-41,43-44,51
+  s_a75afaffde057e::t_f861670504f3da 10,28-32,37-39,46-50
+tests/test_evaluation.py
+  s_a75afaffde057e::t_d393f7ade3639b 184-186
+app/evaluation/sandbox.py
+  s_a75afaffde057e::t_323a9a7c845ae6 19,26,39-42,46-62,127-129
+  s_a75afaffde057e::t_1627d3fb578382 22,24,31-38,43-45,63-66,73-75,84-92,98-118,133-135,147,149-160,165-172,193-194,196-198,220
+  s_a75afaffde057e::t_70cde1af783447 25
+examples/ch19/judge.py
+  s_a75afaffde057e::t_e62f77075862e6 1-136
+tests/test_judge_contract.py
+  s_a75afaffde057e::t_9380407840e0fb 1-56,62,70,73-74,78-79,83-87
+  s_a75afaffde057e::t_2343b49ced406c 57-61,63-69,71-72,75-77,80-82
+README.md
+  s_a75afaffde057e::t_baa1cc1509876f 83,85,89-91
+  s_a75afaffde057e::t_9ae21a084f9d0b 84
+  s_a752d1742e5ff1::t_1a8ce39bc073be 92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "a688c77f4a8b57200e85b0127afa7efe360f31a3",
+  "prompts": {},
+  "sessions": {
+    "s_a752d1742e5ff1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e41f-008c-7d30-b4f7-b4d39de4102e",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "HuaiNan <amy095200@gmail.com>"
+    },
+    "s_a75afaffde057e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d3b6-5e26-75e0-8f9f-d33c5946ed0c",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "HuaiNan <amy095200@gmail.com>"
+    }
+  }
+}
