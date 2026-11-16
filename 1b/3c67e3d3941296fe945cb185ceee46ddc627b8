@@ -1,0 +1,21 @@
+README.md
+  s_a75afaffde057e::t_59d4ab9f81fa46 26,28
+examples/README.md
+  s_a75afaffde057e::t_0550e4d5b3eda5 56,133,135,145,157-160,168-169,179,184,214
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "1b3c67e3d3941296fe945cb185ceee46ddc627b8",
+  "prompts": {},
+  "sessions": {
+    "s_a75afaffde057e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d3b6-5e26-75e0-8f9f-d33c5946ed0c",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "HuaiNan <amy095200@gmail.com>"
+    }
+  }
+}
