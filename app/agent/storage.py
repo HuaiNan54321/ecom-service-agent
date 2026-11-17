@@ -1,5 +1,6 @@
 import json
 import os
+from tempfile import NamedTemporaryFile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -12,6 +13,8 @@ def save_session(
     messages: list[dict],
     summary: Optional[str],
     short_term_memory: Optional[dict] = None,
+    *,
+    owner: Optional[str] = None,
 ) -> None:
     """把对话状态原子写入 JSON 文件。
 
@@ -23,16 +26,21 @@ def save_session(
 
     payload = {
         "version": SESSION_VERSION,
+        "owner": owner,
         "updated_at": datetime.now().isoformat(timespec="seconds"),
         "summary": summary,
         "messages": messages,
         "short_term_memory": short_term_memory,
     }
 
-    tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
-    with tmp_path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, file_path)
+    tmp = NamedTemporaryFile(mode="w", encoding="utf-8", dir=file_path.parent, delete=False)
+    tmp_path = Path(tmp.name)
+    try:
+        with tmp:
+            json.dump(payload, tmp, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, file_path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def load_session(path: str) -> Optional[dict]:
@@ -53,6 +61,7 @@ def load_session(path: str) -> Optional[dict]:
         return None
 
     return {
+        "owner": data.get("owner"),
         "summary": data.get("summary"),
         "messages": data.get("messages", []),
         "short_term_memory": data.get("short_term_memory"),

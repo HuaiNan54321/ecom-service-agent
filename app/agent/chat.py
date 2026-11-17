@@ -3,7 +3,8 @@ from typing import Optional
 
 from openai import OpenAI
 
-from app.agent.storage import delete_session, load_session, save_session
+from app.agent.session import ChatSession, refund_reply, run_requested_tool
+from app.agent.strategies.policy import policy_prompt
 from app.agent.summarizer import summarize
 from app.config.settings import settings
 from app.prompts.customer_service import SYSTEM_PROMPT
@@ -11,17 +12,18 @@ from app.schemas.response import CustomerServiceResponse, IntentType
 from app.agent.tools.manager import ToolManager
 
 
-class EcomAgent:
-    """电商客服 Agent —— 第八期：Skill 可复用能力模块"""
+class EcomAgent(ChatSession):
+    """使用工具、记忆、技能和已采纳策略处理电商客服请求。"""
 
-    def __init__(self, session_path: Optional[str] = None):
+    def __init__(self, session_path: Optional[str] = None, *, user_id: Optional[str] = None):
         self.client = OpenAI(
             api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
         )
         self.model = settings.model_name
         self.temperature = settings.temperature
-        self.session_path = session_path or settings.session_path
+        user_id = settings.memory_user_id if user_id is None else user_id
+        self._bind_session(session_path, user_id)
         self.history_threshold = settings.history_threshold
         self.history_keep_recent = settings.history_keep_recent
         self.max_react_steps = settings.max_react_steps
@@ -29,85 +31,38 @@ class EcomAgent:
         self.tool_manager = ToolManager(
             use_mcp=settings.mcp_enabled,
             mcp_server_url=settings.mcp_server_url,
+            refund_ledger=self.refund_ledger,
         )
 
         from app.agent.memory import MemoryManager
         self.memory_manager = MemoryManager(
             client=self.client,
             model=self.model,
-            user_id=settings.memory_user_id,
+            user_id=user_id,
             memory_dir=settings.memory_dir,
             memory_enabled=settings.memory_enabled,
             max_ltm_facts=settings.max_ltm_facts,
         )
 
-        if settings.memory_enabled:
-            from app.agent.tools.memory_tool import set_memory_manager
-            set_memory_manager(self.memory_manager)
+        self.tool_manager.bind_memory_manager(self.memory_manager)
 
         from app.agent.skills import SkillManager
         self.skill_manager = SkillManager(
             skills_dir=settings.skills_dir,
             enabled=settings.skills_enabled,
         )
-        if settings.skills_enabled:
-            from app.agent.tools.skill_tool import set_skill_manager
-            set_skill_manager(self.skill_manager)
+        self.tool_manager.bind_skill_manager(self.skill_manager)
 
-        self.raw_messages: list[dict] = []
-        self.summary: Optional[str] = None
+        self._restore_session()
 
-        loaded = load_session(self.session_path)
-        if loaded:
-            self.summary = loaded["summary"]
-            self.raw_messages = loaded["messages"]
-            if loaded.get("short_term_memory"):
-                self.memory_manager.restore_stm(loaded["short_term_memory"])
-
-    @property
-    def history_size(self) -> int:
-        return len(self.raw_messages)
-
-    def chat(self, user_input: str) -> CustomerServiceResponse:
-        """处理用户输入：ReAct 循环 → 结构化提取 → 返回结果"""
-        self.raw_messages.append({"role": "user", "content": user_input})
-
-        final_text = self._react_loop()
-
-        result = self._extract_structured_response(final_text)
-
-        self.memory_manager.update_short_term(self.raw_messages[-6:])
-
-        self.raw_messages.append(
-            {"role": "assistant", "content": result.model_dump_json(ensure_ascii=False)}
-        )
-
-        if len(self.raw_messages) > self.history_threshold:
-            self._compress_history()
-
-        save_session(
-            self.session_path, self.raw_messages, self.summary,
-            short_term_memory=self.memory_manager.stm_to_dict(),
-        )
-        return result
-
-    def reset(self):
-        self.raw_messages = []
-        self.summary = None
-        self.memory_manager.reset_short_term()
-        delete_session(self.session_path)
-
-    def save(self) -> None:
-        save_session(
-            self.session_path, self.raw_messages, self.summary,
-            short_term_memory=self.memory_manager.stm_to_dict(),
-        )
+    def _answer_user(self, user_input: str) -> str | CustomerServiceResponse:
+        return self._react_loop()
 
     def close(self):
         self.memory_manager.consolidate_to_long_term(self.raw_messages, self.summary)
         self.tool_manager.close()
 
-    def _react_loop(self) -> str:
+    def _react_loop(self) -> str | CustomerServiceResponse:
         """ReAct 循环：调用 LLM → 执行工具 → 观察结果 → 重复，直到模型给出最终回答。"""
         for step in range(self.max_react_steps):
             messages = self._build_messages()
@@ -121,7 +76,9 @@ class EcomAgent:
             choice = response.choices[0]
             assistant_msg = choice.message
 
-            if assistant_msg.content:
+            # 退款工具回合的文字可能是模型猜测的结果，终端只展示宿主核实后的状态。
+            has_refund = any(tc.function.name == "apply_refund" for tc in assistant_msg.tool_calls or [])
+            if assistant_msg.content and not has_refund:
                 self._print_thought(assistant_msg.content)
 
             if not assistant_msg.tool_calls:
@@ -129,7 +86,7 @@ class EcomAgent:
                 self.raw_messages.append({"role": "assistant", "content": content})
                 return content
 
-            msg_dict = {"role": "assistant", "content": assistant_msg.content}
+            msg_dict = {"role": "assistant", "content": None if has_refund else assistant_msg.content}
             msg_dict["tool_calls"] = [
                 {
                     "id": tc.id,
@@ -143,12 +100,12 @@ class EcomAgent:
             ]
             self.raw_messages.append(msg_dict)
 
+            refund_records = []
             for tc in assistant_msg.tool_calls:
                 func_name = tc.function.name
-                func_args = json.loads(tc.function.arguments)
-
-                self._print_action(func_name, func_args)
-                result_str = self.tool_manager.execute_tool(func_name, func_args)
+                result_str = run_requested_tool(self.tool_manager, tc, self._print_action)
+                if func_name == "apply_refund":
+                    refund_records.append(json.loads(result_str))
                 self._print_observation(result_str)
 
                 self.raw_messages.append({
@@ -156,6 +113,9 @@ class EcomAgent:
                     "tool_call_id": tc.id,
                     "content": result_str,
                 })
+
+            if refund_records:
+                return refund_reply(refund_records)
 
         messages = self._build_messages()
         response = self.client.chat.completions.create(
@@ -221,6 +181,7 @@ class EcomAgent:
 
     def _build_messages(self) -> list[dict]:
         system_content = SYSTEM_PROMPT
+        system_content += policy_prompt("single", self.policy_override)
         if self.skill_manager and self.skill_manager.enabled:
             system_content += self.skill_manager.build_catalog_prompt()
 
@@ -231,7 +192,7 @@ class EcomAgent:
         if self.summary:
             messages.append(
                 {
-                    "role": "system",
+                    "role": "user",
                     "content": f"以下是此前对话的摘要，用于延续上下文记忆：\n{self.summary}",
                 }
             )

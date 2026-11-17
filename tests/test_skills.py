@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from app.agent.skills import SkillManager  # noqa: E402
-from app.agent.tools.skill_tool import load_skill, set_skill_manager  # noqa: E402
+from app.agent.tools.skill_tool import load_skill  # noqa: E402
 
 TEST_SESSION = str(ROOT / "app" / "sessions" / "test_skills_session.json")
 
@@ -83,9 +83,7 @@ def test_catalog_generation():
 def test_load_skill_success():
     print("\n[3/7] load_skill 工具测试（成功）")
     sm = SkillManager(skills_dir=str(ROOT / "app" / "agent" / "skills" / "definitions"), enabled=True)
-    set_skill_manager(sm)
-
-    result = load_skill("process-return")
+    result = load_skill(sm, "process-return")
     if result.get("success"):
         _ok("成功加载 process-return 技能")
     else:
@@ -97,13 +95,13 @@ def test_load_skill_success():
     else:
         _fail("指令内容不完整")
 
-    result2 = load_skill("track-order")
+    result2 = load_skill(sm, "track-order")
     if result2.get("success") and "物流" in result2.get("instructions", ""):
         _ok("成功加载 track-order 技能")
     else:
         _fail(f"track-order 加载失败: {result2}")
 
-    result3 = load_skill("product-recommend")
+    result3 = load_skill(sm, "product-recommend")
     if result3.get("success") and "推荐" in result3.get("instructions", ""):
         _ok("成功加载 product-recommend 技能")
     else:
@@ -114,9 +112,7 @@ def test_load_skill_success():
 def test_load_skill_unknown():
     print("\n[4/7] load_skill 工具测试（未知技能）")
     sm = SkillManager(skills_dir=str(ROOT / "app" / "agent" / "skills" / "definitions"), enabled=True)
-    set_skill_manager(sm)
-
-    result = load_skill("nonexistent-skill")
+    result = load_skill(sm, "nonexistent-skill")
     if not result.get("success"):
         _ok("正确返回错误")
     else:
@@ -144,8 +140,7 @@ def test_skills_disabled():
     else:
         _fail("disabled 时 catalog prompt 不为空")
 
-    set_skill_manager(sm)
-    result = load_skill("process-return")
+    result = load_skill(sm, "process-return")
     if not result.get("success") and "未启用" in result.get("error", ""):
         _ok("disabled 时 load_skill 返回未启用错误")
     else:
@@ -180,7 +175,7 @@ def test_agent_integration():
     from app.agent.chat import EcomAgent
 
     try:
-        agent = EcomAgent(session_path=TEST_SESSION)
+        agent = EcomAgent(session_path=TEST_SESSION, user_id="default")
 
         if hasattr(agent, "skill_manager") and agent.skill_manager.enabled:
             _ok("Agent 初始化了 SkillManager")
@@ -194,7 +189,7 @@ def test_agent_integration():
         else:
             _fail("skill catalog 未注入 system prompt")
 
-        resp = agent.chat("我买的鞋子尺码不对，想退掉，订单号是 ORD-20240115-001")
+        resp = agent.chat("订单 ORD-20240115-001 的鞋子已发货，我发现尺码选错了，想问怎么退货")
         _ok(f"Agent 回复: {resp.reply[:80]}...")
 
         skill_loaded = any(

@@ -1,7 +1,7 @@
 """短期记忆：会话内事实提取与管理。
 
 从当前对话中提取用户关键信息（身份、偏好、情绪等），
-注入 system prompt 增强 Agent 的上下文感知能力。
+作为顾客背景消息 增强 Agent 的上下文感知能力。
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ class ShortTermMemory:
         )
 
     def build_prompt_section(self) -> str | None:
-        """生成注入 system prompt 的短期记忆片段。"""
+        """生成作为顾客背景消息 的短期记忆片段。"""
         if not self.facts:
             return None
         facts_text = "\n".join(f"- {f}" for f in self.facts)

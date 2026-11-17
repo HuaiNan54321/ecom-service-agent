@@ -4,11 +4,20 @@
 当 MCP 未启用或连接失败时，退回本地工具。
 """
 
-import json
-from typing import Optional
+from __future__ import annotations
 
+import json
+from typing import TYPE_CHECKING, Optional
+
+from app.agent.tools.memory_tool import recall_user_memory
+from app.agent.tools.refund import RefundLedger
 from app.agent.tools.registry import TOOL_DEFINITIONS as LOCAL_TOOL_DEFINITIONS
 from app.agent.tools.registry import execute_tool as local_execute_tool
+from app.agent.tools.skill_tool import load_skill
+
+if TYPE_CHECKING:
+    from app.agent.memory.manager import MemoryManager
+    from app.agent.skills.loader import SkillManager
 
 
 class ToolManager:
@@ -19,7 +28,11 @@ class ToolManager:
         use_mcp: bool = False,
         mcp_server_url: str = "",
         allowed_tools: Optional[set] = None,
+        refund_ledger: Optional[RefundLedger] = None,
     ):
+        self.refund_ledger = refund_ledger
+        self._memory_manager: MemoryManager | None = None
+        self._skill_manager: SkillManager | None = None
         self._mcp_client = None
         self._tool_source: dict[str, str] = {}
         self._tool_defs: list[dict] = []
@@ -28,6 +41,18 @@ class ToolManager:
             self._init_mcp(mcp_server_url)
         else:
             self._init_local()
+
+        # 记忆、技能和订单都依赖宿主提供的会话配置，MCP 同名工具不能接管这些操作。
+        managed = {"recall_user_memory": "memory", "load_skill": "skill"}
+        if refund_ledger is not None:
+            for name in ("apply_refund", "query_order", "query_logistics", "list_user_orders"):
+                managed[name] = "ledger"
+        definitions = {d["function"]["name"]: d for d in LOCAL_TOOL_DEFINITIONS}
+        for i, item in enumerate(self._tool_defs):
+            name = item["function"]["name"]
+            if name in managed:
+                self._tool_source[name] = managed[name]
+                self._tool_defs[i] = definitions[name]
 
         if allowed_tools is not None:
             self._filter_tools(allowed_tools)
@@ -82,9 +107,35 @@ class ToolManager:
     def tool_definitions(self) -> list[dict]:
         return self._tool_defs
 
+    def bind_memory_manager(self, manager: MemoryManager | None) -> None:
+        """把已有的会话记忆接入本实例获准使用的工具。"""
+        self._memory_manager = manager
+
+    def bind_skill_manager(self, manager: SkillManager | None) -> None:
+        """绑定本客服启用的技能目录，保留各专员的工具权限。"""
+        self._skill_manager = manager
+
     def execute_tool(self, name: str, arguments: dict) -> str:
         """根据工具来源分发调用。"""
         source = self._tool_source.get(name)
+
+        if source in ("memory", "skill"):
+            try:
+                if source == "memory":
+                    result = recall_user_memory(self._memory_manager, **arguments)
+                else:
+                    result = load_skill(self._skill_manager, **arguments)
+            except TypeError:
+                result = {"success": False, "error": f"{name} 的参数与工具说明不符。"}
+            return json.dumps(result, ensure_ascii=False)
+
+        if source == "ledger":
+            handler = self.refund_ledger.prepare if name == "apply_refund" else getattr(self.refund_ledger, name)
+            try:
+                result = handler(**arguments)
+            except TypeError:
+                result = {"success": False, "status": "rejected", "error": "工具参数格式不正确，请检查订单号和必填项。"}
+            return json.dumps(result, ensure_ascii=False)
 
         if source == "mcp" and self._mcp_client:
             return self._mcp_client.call_tool(name, arguments)

@@ -26,7 +26,7 @@ TEST_SESSION = str(ROOT / "app" / "sessions" / "test_session.json")
 
 def _fresh_agent(threshold: int = 20, keep: int = 6) -> EcomAgent:
     """构造测试用 Agent：指定 session 路径 + 可覆盖阈值"""
-    agent = EcomAgent(session_path=TEST_SESSION)
+    agent = EcomAgent(session_path=TEST_SESSION, user_id="default")
     agent.history_threshold = threshold
     agent.history_keep_recent = keep
     return agent

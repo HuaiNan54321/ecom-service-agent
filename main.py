@@ -35,6 +35,12 @@ def main():
     if agent.history_size > 0:
         print(f"💬 已恢复上次对话（{agent.history_size} 条历史）\n")
 
+    # 确认回执若在上次退出前没能送达，启动时重新核对登记记录。
+    for receipt in agent.refund_ledger.recover() + agent.refund_ledger.pending():
+        print(receipt["message"], flush=True)
+        if receipt["status"] == "submitted":
+            agent.refund_ledger.acknowledge(receipt["request_id"])
+
     while True:
         try:
             user_input = input("👤 你: ").strip()
@@ -98,7 +104,8 @@ def main():
             response = agent.chat(user_input)
 
             # 打印客服回复
-            print(f"\n🤖 小夕: {response.reply}")
+            print(f"\n🤖 小夕: {response.reply}", flush=True)
+            agent.acknowledge_reply(response)
 
             # 打印结构化元信息
             intent_label = INTENT_LABELS.get(response.intent, response.intent)

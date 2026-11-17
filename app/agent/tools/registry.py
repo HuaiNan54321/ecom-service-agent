@@ -1,6 +1,7 @@
 """工具注册表：OpenAI function calling schema + 分发执行"""
 
 import json
+from functools import partial
 from typing import Callable
 
 from app.agent.tools.order import query_order
@@ -19,8 +20,8 @@ _TOOL_MAP: dict[str, Callable] = {
     "apply_refund": apply_refund,
     "search_knowledge": search_knowledge,
     "list_user_orders": list_user_orders,
-    "recall_user_memory": recall_user_memory,
-    "load_skill": load_skill,
+    "recall_user_memory": partial(recall_user_memory, None),
+    "load_skill": partial(load_skill, None),
 }
 
 TOOL_DEFINITIONS: list[dict] = [
@@ -122,7 +123,7 @@ TOOL_DEFINITIONS: list[dict] = [
         "type": "function",
         "function": {
             "name": "apply_refund",
-            "description": "为指定订单申请退款。注意：这是一个敏感操作，调用前应先与用户确认",
+            "description": "为当前顾客的待发货订单准备整单退款草案。请展示工具给出的请求号；只有顾客按提示亲自确认后，宿主才会登记申请。",
             "parameters": {
                 "type": "object",
                 "properties": {

@@ -19,19 +19,23 @@
 
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from app.mcp_client import MCPClient  # noqa: E402
 from app.agent.tools.manager import ToolManager  # noqa: E402
+from app.agent.tools.registry import TOOL_DEFINITIONS  # noqa: E402
 from app.agent.chat import EcomAgent  # noqa: E402
+from app.config.settings import settings  # noqa: E402
 from app.schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
 
 MCP_URL = "http://127.0.0.1:9123/mcp"
 TEST_SESSION = str(ROOT / "app" / "sessions" / "test_mcp_session.json")
 
-EXPECTED_TOOLS = {"query_order", "query_product", "query_logistics", "apply_refund"}
+EXPECTED_TOOLS = {"query_order", "query_product", "query_logistics", "apply_refund", "search_knowledge"}
+LOCAL_TOOLS = {item["function"]["name"] for item in TOOL_DEFINITIONS}
 
 
 def _ok(msg: str):
@@ -57,14 +61,17 @@ def _clean():
     Path(TEST_SESSION).unlink(missing_ok=True)
 
 
+def _mcp_agent():
+    with patch.multiple(settings, mcp_enabled=True, mcp_server_url=MCP_URL, memory_enabled=False):
+        return EcomAgent(session_path=TEST_SESSION, user_id="default")
+
+
 # ---------- 测试 1：MCP Client 连接与工具发现 ----------
 def test_mcp_connection():
     print("\n[1/7] MCP Client 连接与工具发现")
     client = MCPClient(MCP_URL)
     try:
         tools = client.connect()
-        if len(tools) != 4:
-            _fail(f"期望 4 个工具，实际发现 {len(tools)} 个")
         tool_names = {t["function"]["name"] for t in tools}
         if tool_names != EXPECTED_TOOLS:
             _fail(f"工具名称不匹配: {tool_names}")
@@ -129,15 +136,15 @@ def test_tool_manager_mcp():
     manager = ToolManager(use_mcp=True, mcp_server_url=MCP_URL)
     try:
         defs = manager.tool_definitions
-        if len(defs) != 4:
-            _fail(f"期望 4 个工具定义，实际 {len(defs)}")
+        if {item["function"]["name"] for item in defs} != LOCAL_TOOLS | EXPECTED_TOOLS:
+            _fail("远端与本地工具未完整合并")
         _ok(f"ToolManager 加载了 {len(defs)} 个工具")
 
         import json
-        result = manager.execute_tool("query_logistics", {"order_id": "ORD-20240115-001"})
+        result = manager.execute_tool("query_product", {"keyword": "耳机"})
         data = json.loads(result)
         if not data.get("success"):
-            _fail(f"物流查询失败: {data}")
+            _fail(f"商品查询失败: {data}")
         _ok(f"通过 ToolManager 调用 MCP 工具成功")
     finally:
         manager.close()
@@ -149,12 +156,12 @@ def test_tool_manager_local():
     manager = ToolManager(use_mcp=False)
     try:
         defs = manager.tool_definitions
-        if len(defs) != 4:
-            _fail(f"期望 4 个工具定义，实际 {len(defs)}")
-        _ok("本地模式加载 4 个工具")
+        if {item["function"]["name"] for item in defs} != LOCAL_TOOLS:
+            _fail("本地工具未完整加载")
+        _ok(f"本地模式加载了 {len(defs)} 个工具")
 
         import json
-        result = manager.execute_tool("query_order", {"order_id": "ORD-20240115-001"})
+        result = manager.execute_tool("query_product", {"keyword": "耳机"})
         data = json.loads(result)
         if not data.get("success"):
             _fail(f"本地工具调用失败: {data}")
@@ -167,9 +174,7 @@ def test_tool_manager_local():
 def test_agent_mcp_order():
     print("\n[6/7] 完整 Agent + MCP 端到端（订单查询）")
     _clean()
-    agent = EcomAgent(session_path=TEST_SESSION)
-    agent.tool_manager.close()
-    agent.tool_manager = ToolManager(use_mcp=True, mcp_server_url=MCP_URL)
+    agent = _mcp_agent()
     agent.history_threshold = 30
 
     try:
@@ -191,9 +196,7 @@ def test_agent_mcp_order():
 def test_agent_mcp_product():
     print("\n[7/7] 完整 Agent + MCP 端到端（商品搜索）")
     _clean()
-    agent = EcomAgent(session_path=TEST_SESSION)
-    agent.tool_manager.close()
-    agent.tool_manager = ToolManager(use_mcp=True, mcp_server_url=MCP_URL)
+    agent = _mcp_agent()
     agent.history_threshold = 30
 
     try:

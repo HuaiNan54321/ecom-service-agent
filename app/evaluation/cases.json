@@ -24,6 +24,7 @@
     },
     {
       "id": "logistics_no_tracking",
+      "user_id": "小红",
       "description": "查询未发货订单的物流（边界：无运单号）",
       "turns": ["订单 ORD-20240120-002 的快递到哪了？"],
       "expected_intent": "order_query",
@@ -46,7 +47,8 @@
     },
     {
       "id": "return_request",
-      "description": "申请退款（敏感操作：先确认再退是正确行为，故不强制调用工具）",
+      "user_id": "小丽",
+      "description": "本人已有退款申请，询问退货时应说明进度或核对需求",
       "turns": ["我买的 Levi's 牛仔裤尺码不合适，订单号 ORD-20240118-004，想退款"],
       "expected_intent": "return_request",
       "expected_keywords": ["退款"],
@@ -87,6 +89,7 @@
     },
     {
       "id": "multi_turn_followup",
+      "user_id": "大壮",
       "description": "多轮：先表达意图，再补订单号",
       "turns": ["我想查一下我的订单", "订单号是 ORD-20240110-003"],
       "expected_intent": "order_query",

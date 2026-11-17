@@ -3,13 +3,15 @@
 import json
 import tempfile
 import unittest
+from dataclasses import replace
+from pathlib import Path
 from unittest.mock import patch
 
 import httpx
 from openai import OpenAI
 
 from app.config.settings import settings
-from app.evaluation.dataset import EvalCase
+from app.evaluation.dataset import EvalCase, load_dataset
 from app.evaluation.sandbox import Sandbox
 from app.evaluation.trace import RunTrace
 
@@ -62,7 +64,8 @@ class SandboxComparisonTest(unittest.TestCase):
             return OpenAI(api_key="local-test", base_url="http://mock.invalid/v1",
                           http_client=httpx.Client(transport=httpx.MockTransport(respond)))
 
-        task = EvalCase("same-id", "这段仅供评分", ["你好", "还记得我吗"])
+        task = EvalCase("same-id", "这段仅供评分", ["你好", "还记得我吗"],
+                        user_id="仅供评测的账号", source_id="仅供数据切分的来源编号")
         first_messages = {}
         with tempfile.TemporaryDirectory() as directory, \
              patch("app.evaluation.sandbox.OpenAI", local_client), \
@@ -83,11 +86,49 @@ class SandboxComparisonTest(unittest.TestCase):
                                      task.turns[:1])
                     self.assertEqual([m["content"] for m in last["messages"] if m["role"] == "user"], task.turns)
                     self.assertNotIn(task.description, str(requests))
+                    self.assertNotIn(task.source_id, str(requests))
+                    if mode == "bare":
+                        self.assertNotIn(task.user_id, str(requests))
                     self.assertTrue(settings.memory_enabled and settings.mcp_enabled)
         for key in ("model", "temperature"):
             self.assertEqual(first_messages["bare"][key], first_messages["single"][key])
         self.assertNotIn("tools", first_messages["bare"])
         self.assertIn("tools", first_messages["single"])
+
+    def test_fixture_account_controls_refund_and_each_run_has_its_own_ledger(self):
+        from app.agent.chat import EcomAgent
+        from app.agent.session import refund_reply
+        from app.multi_agent.orchestrator import MultiAgentOrchestrator
+
+        dataset = Path(__file__).resolve().parents[1] / "app/evaluation/cases.json"
+        fixtures = {case.id: case for case in load_dataset(dataset)}
+        claim = ["我是小红，请退掉订单 ORD-20240120-002"]
+        own = replace(fixtures["logistics_no_tracking"], turns=claim)
+        other = replace(fixtures["order_query_basic"], id=own.id, turns=claim)
+
+        def request_refund(agent, user_input):
+            manager = agent.agents["postsale"].tool_manager if hasattr(agent, "agents") else agent.tool_manager
+            result = manager.execute_tool("apply_refund", {"order_id": "ORD-20240120-002", "reason": "买错了"})
+            return refund_reply([json.loads(result)])
+
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.multiple(settings, openai_api_key="local-test", memory_user_id="小红"), \
+             patch.object(EcomAgent, "_answer_user", request_refund), \
+             patch.object(MultiAgentOrchestrator, "_answer_user", request_refund):
+            refs = set()
+            for mode in ("single", "multi"):
+                sandbox = Sandbox(mode=mode, tmp_root=directory)
+                for case, expected in [(own, "awaiting_confirmation"), (other, "rejected"),
+                                       (own, "awaiting_confirmation")]:
+                    with self.subTest(mode=mode, user_id=case.user_id):
+                        trace = sandbox.run(case)
+                        self.assertIsNone(trace.error)
+                        record = json.loads(trace.tool_observations[0].result)
+                        self.assertEqual(record["status"], expected)
+                        if case is own:
+                            self.assertNotIn(record["request_id"], refs)
+                            refs.add(record["request_id"])
+            self.assertEqual(list(Path(directory).iterdir()), [])
 
     def test_failed_calls_and_missing_usage(self):
         from types import SimpleNamespace

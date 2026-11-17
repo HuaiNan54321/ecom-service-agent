@@ -34,6 +34,14 @@ class EvalCase:
     max_tokens: int | None = None  # token 预算上限，None=不设上限
     expected_route: str | None = None  # 多 Agent 期望路由（presale/postsale/complaint），可选
 
+    # 这是夹具预设的登录用户，不从客服对话中猜测。
+    user_id: str = "default"
+    source_id: str | None = None  # 同一原始工单或种子的改写共用此编号，用于分组切分。
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.user_id, str) or not self.user_id.strip():
+            raise ValueError(f"评测用例 {self.id} 的 user_id 必须是非空字符串")
+
 
 def load_dataset(path: str | Path) -> list[EvalCase]:
     """从 JSON 文件加载用例列表，文件格式为 {"cases": [ {EvalCase 字段}, ... ]}。"""

@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT))
 
 from openai import OpenAI  # noqa: E402
 
+from app.agent.strategies.policy import current_policy, policy_scope  # noqa: E402
 from app.config.settings import settings  # noqa: E402
 from app.evaluation.dataset import load_dataset  # noqa: E402
 from app.evaluation.evaluator import Evaluator, run_comparison  # noqa: E402
@@ -126,7 +127,8 @@ def main():
 
     print(f"\n[2/3] 在沙箱中重跑测试集（{args.mode} 模式）...")
     client = OpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url)
-    sandbox = Sandbox(mode=args.mode)
+    policy_version, rules = current_policy(args.mode)
+    sandbox = Sandbox(mode=args.mode, policy_override=rules)
     evaluator = Evaluator(
         sandbox=sandbox,
         client=client,
@@ -158,9 +160,15 @@ def main():
         print(f"  新通过 {report['paired']['improved']}，退步 {report['paired']['regressed']}")
     else:
         report = evaluator.run_all(cases)
+        report["protocol"] = {"judge": use_judge}
         print("\n[3/3] 生成评估报告...")
         _print_report(report)
 
+    report["protocol"].update(
+        producer="app.scripts.run_eval", mode=args.mode, model=settings.model_name,
+        temperature=settings.temperature, dimension_threshold=settings.eval_pass_threshold,
+        policy_scope=policy_scope(args.mode), policy_version=policy_version, policy_rules=list(rules),
+    )
     if args.output:
         out_path = ROOT / args.output if not Path(args.output).is_absolute() else Path(args.output)
         out_path.parent.mkdir(parents=True, exist_ok=True)

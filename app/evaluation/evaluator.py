@@ -77,6 +77,9 @@ class Evaluator:
         res = EvalResult(case_id=case.id, description=case.description,
                          trace=trace.to_dict(), token_cost=trace.total_tokens)
 
+        if case.source_id:
+            res.trace["source_id"] = case.source_id
+
         if trace.error or trace.final_response is None:
             res.error = trace.error or "运行结束后没有得到客服答复"
             return res
@@ -221,16 +224,21 @@ class Evaluator:
         }
 
 
-def run_comparison(cases: list[EvalCase], baseline: Evaluator, candidate: Evaluator) -> dict:
-    """每题每侧各运行一次，结果指标只看双方都可交付的末轮答复。"""
+def run_comparison(cases: list[EvalCase], baseline: Evaluator, candidate: Evaluator, *,
+                   answer_only: bool = True) -> dict:
+    """同题交替运行。无工具基线比较共用答复目标；客服策略对照保留所有已指定的规则。"""
     if baseline.use_judge or candidate.use_judge or baseline.pass_threshold != candidate.pass_threshold:
         raise ValueError("配对比较需要共用规则阈值，关闭额外模型裁判")
     if not cases or len({case.id for case in cases}) != len(cases):
         raise ValueError("对照数据集应非空，且每道题的编号唯一")
     for case in cases:
-        if not case.turns or not (case.expected_intent or case.expected_keywords
-                                  or case.expected_requires_human is not None):
-            raise ValueError(f"{case.id} 需要用户输入，并预先指定至少一个答复验收条件")
+        has_answer_check = bool(case.expected_intent or case.expected_keywords
+                                or case.expected_requires_human is not None)
+        has_process_check = bool(case.expected_tools or case.max_tokens is not None
+                                 or case.min_tool_calls == 0
+                                 or (case.expected_route and baseline.sandbox.mode == "multi"))
+        if not case.turns or not (has_answer_check or (not answer_only and has_process_check)):
+            raise ValueError(f"{case.id} 需要用户输入，并预先指定双方都可评分的验收条件")
 
     results = {"baseline": [], "candidate": []}
     sides = [("baseline", baseline), ("candidate", candidate)]
@@ -238,14 +246,15 @@ def run_comparison(cases: list[EvalCase], baseline: Evaluator, candidate: Evalua
         # 交替谁先运行，减少服务负载随时间变化带来的固定顺序偏差。
         for side, evaluator in (sides if index % 2 == 0 else reversed(sides)):
             row = evaluator.run_case(case)
-            scores = [score for score, required in (
-                (row.intent_match, case.expected_intent is not None),
-                (row.keyword_coverage, bool(case.expected_keywords)),
-                (row.requires_human_match, case.expected_requires_human is not None),
-            ) if required]
-            row.passed = row.error is None and all(
-                score is not None and score >= evaluator.pass_threshold for score in scores
-            )
+            if answer_only:
+                scores = [score for score, required in (
+                    (row.intent_match, case.expected_intent is not None),
+                    (row.keyword_coverage, bool(case.expected_keywords)),
+                    (row.requires_human_match, case.expected_requires_human is not None),
+                ) if required]
+                row.passed = row.error is None and all(
+                    score is not None and score >= evaluator.pass_threshold for score in scores
+                )
             results[side].append(row)
 
     report = {"result_targets": {

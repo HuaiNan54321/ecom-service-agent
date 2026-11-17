@@ -9,6 +9,8 @@ from openai import OpenAI
 
 from app.prompts.agents import COMPLAINT_PROMPT, POSTSALE_PROMPT, PRESALE_PROMPT
 from app.agent.tools.manager import ToolManager
+from app.agent.session import refund_reply, run_requested_tool
+from app.schemas.response import CustomerServiceResponse
 
 
 AGENT_CONFIGS = {
@@ -54,7 +56,7 @@ class SubAgent:
 
     def handle(
         self, messages: list[dict], max_steps: int = 5,
-    ) -> tuple[str, list[dict]]:
+    ) -> tuple[str | CustomerServiceResponse, list[dict]]:
         """执行 ReAct 循环，返回 (最终文本, 新增消息列表)。"""
         new_messages: list[dict] = []
         working = list(messages)
@@ -68,7 +70,9 @@ class SubAgent:
             )
             assistant_msg = response.choices[0].message
 
-            if assistant_msg.content:
+            # 退款工具回合的文字可能是模型猜测的结果，终端只展示宿主核实后的状态。
+            has_refund = any(tc.function.name == "apply_refund" for tc in assistant_msg.tool_calls or [])
+            if assistant_msg.content and not has_refund:
                 self._print_thought(assistant_msg.content)
 
             if not assistant_msg.tool_calls:
@@ -77,7 +81,7 @@ class SubAgent:
                 new_messages.append(msg)
                 return content, new_messages
 
-            msg_dict: dict = {"role": "assistant", "content": assistant_msg.content}
+            msg_dict: dict = {"role": "assistant", "content": None if has_refund else assistant_msg.content}
             msg_dict["tool_calls"] = [
                 {
                     "id": tc.id,
@@ -92,12 +96,12 @@ class SubAgent:
             new_messages.append(msg_dict)
             working.append(msg_dict)
 
+            refund_records = []
             for tc in assistant_msg.tool_calls:
                 func_name = tc.function.name
-                func_args = json.loads(tc.function.arguments)
-
-                self._print_action(func_name, func_args)
-                result_str = self.tool_manager.execute_tool(func_name, func_args)
+                result_str = run_requested_tool(self.tool_manager, tc, self._print_action)
+                if func_name == "apply_refund":
+                    refund_records.append(json.loads(result_str))
                 self._print_observation(result_str)
 
                 tool_msg = {
@@ -107,6 +111,9 @@ class SubAgent:
                 }
                 new_messages.append(tool_msg)
                 working.append(tool_msg)
+
+            if refund_records:
+                return refund_reply(refund_records), new_messages
 
         response = self.client.chat.completions.create(
             model=self.model,

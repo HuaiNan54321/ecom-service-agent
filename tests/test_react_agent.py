@@ -14,6 +14,8 @@
 """
 
 import sys
+from shutil import rmtree
+from tempfile import TemporaryDirectory
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,18 +24,19 @@ sys.path.insert(0, str(ROOT))
 from app.agent.chat import EcomAgent  # noqa: E402
 from app.schemas.response import CustomerServiceResponse, IntentType  # noqa: E402
 
-TEST_SESSION = str(ROOT / "app" / "sessions" / "test_react_session.json")
+TEST_ROOT = TemporaryDirectory()
+TEST_SESSION = Path(TEST_ROOT.name) / "case" / "session.json"
 
 
-def _fresh_agent(threshold: int = 30, keep: int = 6) -> EcomAgent:
-    agent = EcomAgent(session_path=TEST_SESSION)
+def _fresh_agent(threshold: int = 30, keep: int = 6, *, user_id: str = "default") -> EcomAgent:
+    agent = EcomAgent(session_path=str(TEST_SESSION), user_id=user_id)
     agent.history_threshold = threshold
     agent.history_keep_recent = keep
     return agent
 
 
 def _clean():
-    Path(TEST_SESSION).unlink(missing_ok=True)
+    rmtree(TEST_SESSION.parent, ignore_errors=True)
 
 
 def _ok(msg: str):
@@ -121,9 +124,11 @@ def test_product_search():
 def test_refund():
     print("\n[5/7] 退款申请测试（应调用 apply_refund）")
     _clean()
-    agent = _fresh_agent()
-    resp = agent.chat("我要退掉订单 ORD-20240110-003，质量有问题")
+    agent = _fresh_agent(user_id="小红")
+    resp = agent.chat("帮我给还没发货的订单 ORD-20240120-002 申请退款，原因是买错了")
     _assert_structured(resp, "退款申请")
+    if "确认退款 RF-" not in resp.reply:
+        _fail(f"回复没有给出待确认的退款草案：{resp.reply}")
     print(f"     回复：{resp.reply[:120]}")
 
 
@@ -148,7 +153,7 @@ def test_unknown_order():
 def test_persistence_with_tools():
     print("\n[7/7] 会话持久化兼容测试（工具消息也能保存和恢复）")
     _clean()
-    agent = _fresh_agent()
+    agent = _fresh_agent(user_id="小红")
     agent.chat("帮我查一下订单 ORD-20240120-002")
 
     has_tool_msg = any(m.get("role") == "tool" for m in agent.raw_messages)
@@ -158,7 +163,7 @@ def test_persistence_with_tools():
         print("  ⚠️  raw_messages 中未发现 tool 消息（模型可能未调用工具）")
 
     agent.save()
-    agent2 = _fresh_agent()
+    agent2 = _fresh_agent(user_id="小红")
     if agent2.history_size == agent.history_size:
         _ok(f"新实例恢复了 {agent2.history_size} 条历史（含工具消息）")
     else:

@@ -69,17 +69,19 @@ class _BareCustomerService:
 class Sandbox:
     """Agent 评估沙箱：构建隔离环境、插桩采集、跑用例产出 RunTrace。"""
 
-    def __init__(self, mode: str = "single", tmp_root: str | None = None):
+    def __init__(self, mode: str = "single", tmp_root: str | None = None, *,
+                 policy_override: tuple[str, ...] | None = None):
         if mode not in {"bare", "single", "multi"}:
             raise ValueError("沙箱模式只支持 bare、single 或 multi")
         self.mode = mode
+        self.policy_override = policy_override
         self.tmp_root = Path(tmp_root) if tmp_root else Path(tempfile.mkdtemp(prefix="eval_sandbox_"))
         self.tmp_root.mkdir(parents=True, exist_ok=True)
 
     def session_path_for(self, case_id: str) -> str:
         return str(self.tmp_root / f"{case_id}.json")
 
-    def _build_agent(self, session_path: str):
+    def _build_agent(self, session_path: str, user_id: str = "default"):
         """在隔离配置下构建被测 Agent。"""
         if self.mode == "bare":
             return _BareCustomerService()
@@ -87,9 +89,9 @@ class Sandbox:
         with patch.multiple(settings, memory_enabled=False, mcp_enabled=False):
             if self.mode == "multi":
                 from app.multi_agent.orchestrator import MultiAgentOrchestrator
-                return MultiAgentOrchestrator(session_path=session_path)
+                return MultiAgentOrchestrator(session_path=session_path, user_id=user_id)
             from app.agent.chat import EcomAgent
-            return EcomAgent(session_path=session_path)
+            return EcomAgent(session_path=session_path, user_id=user_id)
 
     def run(self, case: EvalCase) -> RunTrace:
         """跑一条用例，返回采集到的运行轨迹。"""
@@ -100,11 +102,9 @@ class Sandbox:
             try:
                 # 复跑相同编号也建立全新会话，编号中的路径字符不会参与写盘。
                 run_dir = stack.enter_context(tempfile.TemporaryDirectory(dir=self.tmp_root))
-                if self.mode != "bare":
-                    from app.agent.tools import memory_tool, skill_tool
-                    stack.enter_context(patch.object(memory_tool, "_memory_manager", None))
-                    stack.enter_context(patch.object(skill_tool, "_skill_manager", None))
-                agent = self._build_agent(str(Path(run_dir) / "session.json"))
+                agent = self._build_agent(str(Path(run_dir) / "session.json"), case.user_id)
+                if self.policy_override is not None:
+                    agent.policy_override = self.policy_override
                 stack.callback(self._close_tool_managers, agent)
                 stack.callback(agent.client.close)
                 self._instrument(agent, trace, patches)

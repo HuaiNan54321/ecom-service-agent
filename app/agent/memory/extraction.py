@@ -54,14 +54,14 @@ def extract_short_term_facts(
         return existing_facts
 
     existing_text = "\n".join(f"- {f}" for f in existing_facts) if existing_facts else "（暂无）"
-    prompt = STM_EXTRACTION_PROMPT.format(existing_facts=existing_text)
+    context = f"【已有短期记忆】\n{existing_text}\n\n【最近对话】\n{transcript}"
 
     response = client.chat.completions.create(
         model=model,
         temperature=0.0,
         messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": transcript},
+            {"role": "system", "content": STM_EXTRACTION_PROMPT},
+            {"role": "user", "content": context},
         ],
     )
     raw = response.choices[0].message.content.strip()
@@ -108,13 +108,13 @@ def extract_long_term_facts(
         if existing_facts
         else "（暂无）"
     )
-    prompt = LTM_EXTRACTION_PROMPT.format(existing_ltm=existing_text)
+    parts.insert(0, f"【已有长期记忆】\n{existing_text}")
 
     response = client.chat.completions.create(
         model=model,
         temperature=0.0,
         messages=[
-            {"role": "system", "content": prompt},
+            {"role": "system", "content": LTM_EXTRACTION_PROMPT},
             {"role": "user", "content": "\n\n".join(parts)},
         ],
     )

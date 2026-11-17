@@ -6,11 +6,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from tempfile import NamedTemporaryFile
 from typing import Optional
 
 from openai import OpenAI
@@ -44,30 +46,48 @@ class LongTermMemory:
 
     @property
     def memory_path(self) -> Path:
-        return self.memory_dir / f"{self.user_id}.json"
+        key = hashlib.sha256(self.user_id.encode("utf-8")).hexdigest()
+        return self.memory_dir / "users" / f"{key}.json"
+
+    def _legacy_path(self) -> Path | None:
+        """旧文件名须是可直接定位的单个名字，身份仍以文件内的原始编号为准。"""
+        name = f"{self.user_id}.json"
+        if not self.user_id or any(ord(c) < 32 or c in '<>:"/\\|?*' for c in name):
+            return None
+        if len(os.fsencode(name)) > 255 or PureWindowsPath(name).is_reserved():
+            return None
+        return self.memory_dir / name
+
+    def _read_owned(self, path: Path | None) -> dict | None:
+        if path is None or path.is_symlink():
+            return None
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            return None
+        return data if isinstance(data, dict) and data.get("user_id") == self.user_id else None
 
     def load(self) -> None:
         """从 JSON 文件加载用户的长期记忆。"""
-        if not self.memory_path.exists():
+        path = self.memory_path if self.memory_path.exists() else self._legacy_path()
+        data = self._read_owned(path)
+        if data is None:
             return
-        try:
-            with self.memory_path.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-        except (json.JSONDecodeError, OSError):
-            return
-
-        for item in data.get("facts", []):
-            self.facts.append(MemoryFact(
+        self.facts = [
+            MemoryFact(
                 content=item["content"],
                 category=item.get("category", "other"),
                 created_at=item.get("created_at", ""),
                 source_session=item.get("source_session", ""),
-            ))
+            ) for item in data.get("facts", [])
+        ]
         self.interaction_summaries = data.get("interaction_summaries", [])
 
     def save(self) -> None:
         """持久化到 JSON 文件（原子写入）。"""
-        self.memory_dir.mkdir(parents=True, exist_ok=True)
+        target = self.memory_path
+        target.parent.mkdir(parents=True, exist_ok=True)
 
         payload = {
             "version": 1,
@@ -77,10 +97,14 @@ class LongTermMemory:
             "interaction_summaries": self.interaction_summaries,
         }
 
-        tmp_path = self.memory_path.with_suffix(".json.tmp")
-        with tmp_path.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
-        os.replace(tmp_path, self.memory_path)
+        tmp = NamedTemporaryFile(mode="w", encoding="utf-8", dir=target.parent, delete=False)
+        tmp_path = Path(tmp.name)
+        try:
+            with tmp:
+                json.dump(payload, tmp, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, target)
+        finally:
+            tmp_path.unlink(missing_ok=True)
 
     def add_facts(self, new_facts: list[MemoryFact]) -> None:
         """添加新事实，自动去重并裁剪到 max_facts。"""
@@ -122,7 +146,7 @@ class LongTermMemory:
         self.save()
 
     def build_prompt_section(self) -> str | None:
-        """生成注入 system prompt 的长期记忆片段。"""
+        """生成作为顾客背景消息 的长期记忆片段。"""
         if not self.facts and not self.interaction_summaries:
             return None
 
@@ -144,5 +168,7 @@ class LongTermMemory:
         """清空该用户的长期记忆（文件也删除）。"""
         self.facts = []
         self.interaction_summaries = []
-        if self.memory_path.exists():
-            self.memory_path.unlink()
+        legacy = self._legacy_path()
+        if legacy is not None and self._read_owned(legacy) is not None:
+            legacy.unlink(missing_ok=True)
+        self.memory_path.unlink(missing_ok=True)

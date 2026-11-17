@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class IntentType(str, Enum):
@@ -20,6 +20,9 @@ class IntentType(str, Enum):
 
 class CustomerServiceResponse(BaseModel):
     """客服回复的结构化输出"""
+
+    # 只有宿主可以附上待确认送达的业务回执，不进入模型的输出格式。
+    _receipt_ids: tuple[str, ...] = PrivateAttr(default=())
 
     intent: IntentType = Field(description="识别到的用户意图类型")
     confidence: float = Field(

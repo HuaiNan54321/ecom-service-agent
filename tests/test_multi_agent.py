@@ -26,7 +26,7 @@ TEST_SESSION = str(ROOT / "app" / "sessions" / "test_multi_agent_session.json")
 
 
 def _fresh_orchestrator(threshold: int = 30, keep: int = 6) -> MultiAgentOrchestrator:
-    orch = MultiAgentOrchestrator(session_path=TEST_SESSION)
+    orch = MultiAgentOrchestrator(session_path=TEST_SESSION, user_id="default")
     orch.history_threshold = threshold
     orch.history_keep_recent = keep
     return orch
@@ -117,7 +117,7 @@ def test_complaint():
     print("\n[4/7] 投诉 Agent 测试")
     _clean()
     orch = _fresh_orchestrator()
-    resp = orch.chat("我要投诉！订单 ORD-20240110-003 的商品质量太差了，我非常不满意！")
+    resp = orch.chat("我要投诉！订单 ORD-20240115-001 的快递一直没送到，我非常不满意！")
     _assert_structured(resp, "投诉")
 
     apologize_kw = ["抱歉", "非常抱歉", "理解", "对不起", "歉意", "不好意思"]

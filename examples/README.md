@@ -44,17 +44,17 @@ export AGENTBOOK_API_KEY='读者自己的密钥'
 
 ## 与主应用的对应关系
 
-`examples/` 是同一开源仓库内的独立原理实验，帮助观察模型请求、状态变更和评测机制；`app/` 是已有电商 Agent 实现。默认实验无需安装仓库根 `requirements.txt`，也不会自动读取 `.env`。`main.py` 则使用 `app/config/settings.py` 自动加载 `.env` 中的 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`MODEL_NAME` 等配置，运行对话、构建真实向量索引或主系统评测可能调用模型并产生费用；主系统并不以 `--live` 作为联网开关。
+`examples/` 是同一公开仓库内的独立原理实验，帮助观察模型请求、状态变更和评测机制；`app/` 是已有电商 Agent 实现。默认实验无需安装仓库根 `requirements.txt`，也不会自动读取 `.env`。`main.py` 则使用 `app/config/settings.py` 自动加载 `.env` 中的 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`MODEL_NAME` 等配置，运行对话、构建真实向量索引或主系统评测可能调用模型并产生费用；主系统并不以 `--live` 作为联网开关。
 
 | 知识点 | 主系统源码 | 独立实验的边界 |
 | --- | --- | --- |
-| 工具与退款 | `app/agent/tools/order.py`、`refund.py`、`registry.py` | 主系统使用 `ORD-*` 数据；`apply_refund` 返回模拟说明，没有实验中的主体隔离、幂等记录或退款状态写入。 |
+| 工具与退款 | `app/agent/tools/refund.py`、`app/agent/tools/manager.py` | 主聊天使用 `ORD-*` 教学订单和可跨进程查询的退款账本。模型提议后，用户用请求号确认或取消。书中 A1001 等订单和故障注入属于章节沙箱。 |
 | RAG | `app/agent/rag/chunker.py`、`backends/numpy_backend.py`、`retriever.py` | 第 13–14 章默认词袋和固定政策，用来拆解检索过程；真实 Embedding 是显式可选入口。 |
 | Memory | `app/agent/memory/` | 主系统长期记忆使用 JSON；第 15 章 SQLite、版本校验和 TTL 是独立机制实验。 |
 | Skills | `app/agent/skills/loader.py` 与 `definitions/` | 第 16 章使用自己的两份短 Skill，方便观察按需加载与长度变化。 |
 | 评测 | `app/evaluation/`、`app/scripts/run_eval.py` | 主系统 `Sandbox` 是运行真实 Agent 并收集轨迹的插桩器；`examples.common.Sandbox` 是确定性合成状态环境，两者不能互换。`run_eval --no-judge` 仍可能调用 Agent 模型。 |
-| MCP | `mcp_server/server.py`、`app/mcp_client/` | 主系统 MCP v1 使用 HTTP；第 9 章 MCP v2.3 实验使用独立环境和本机 stdio 子进程。 |
-| 多 Agent 与优化 | `app/multi_agent/`、`app/agent/strategies/` | 主系统按路由选子 Agent；实验并行汇总、自进化审核和 `active.txt` 不会自动接入 `main.py`。 |
+| MCP | `mcp_server/server.py`、`app/mcp_client/` | 主系统 MCP v1 使用 HTTP。打开 MCP 后，主聊天中的订单、物流和退款仍经绑定顾客身份的本地工具处理。第 9 章的 MCP v2.3 实验使用独立环境和本机 stdio 子进程。 |
+| 多 Agent 与优化 | `app/multi_agent/`、`app/scripts/evolve.py` | 单客服和多客服在实际对话中读取各自已验证、采纳的策略。`app.scripts.evolve` 使用主客服评测报告。第 28 章的独立实验把采用结果写到本次实验输出目录的 `active.txt`。 |
 
 `AGENTBOOK_*` 只属于示例的显式真实调用，不会自动继承主应用的 `.env`。下面的 `Sandbox` 始终指 `examples.common.Sandbox`，所有订单与用户均为独立实验数据。
 
@@ -214,7 +214,7 @@ python -m examples.ch28.demo --rollback runs/ch28
 
 第 22 章默认入口已经包含“子进程模拟中断→恢复”的完整演示；中间子进程的约定退出码不是整段演示失败。第 9 章的 MCP 实验故意调用未知工具时会出现预期错误日志，最终入口退出码与断言结果才是验证结论。
 
-生成的 `runs/` 目录只保存本地实验报告与策略文件，已加入 Git 忽略规则。第 28 章 `active.txt` 不被主应用读取；采纳与回滚只改变实验文件。
+生成的 `runs/` 目录只保存本地实验报告与策略文件，已加入 Git 忽略规则。若要让实际客服在下次对话采用新规则，请按[主项目说明](../README.md#从主客服的评测记录改进下一轮对话)运行 `app.scripts.evolve`。第 28 章的 `active.txt` 供本章的教学策略使用。
 
 ## 运行示例测试
 

@@ -7,7 +7,8 @@ from typing import Optional
 
 from openai import OpenAI
 
-from app.agent.storage import delete_session, load_session, save_session
+from app.agent.session import ChatSession
+from app.agent.strategies.policy import policy_prompt
 from app.agent.summarizer import summarize
 from app.config.settings import settings
 from app.multi_agent.agents import AGENT_CONFIGS, SubAgent
@@ -16,17 +17,18 @@ from app.schemas.response import CustomerServiceResponse, IntentType
 from app.agent.tools.manager import ToolManager
 
 
-class MultiAgentOrchestrator:
+class MultiAgentOrchestrator(ChatSession):
     """多 Agent 编排器，对外接口与 EcomAgent 一致。"""
 
-    def __init__(self, session_path: Optional[str] = None):
+    def __init__(self, session_path: Optional[str] = None, *, user_id: Optional[str] = None):
         self.client = OpenAI(
             api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
         )
         self.model = settings.model_name
         self.temperature = settings.temperature
-        self.session_path = session_path or settings.session_path
+        user_id = settings.memory_user_id if user_id is None else user_id
+        self._bind_session(session_path, user_id)
         self.history_threshold = settings.history_threshold
         self.history_keep_recent = settings.history_keep_recent
         self.max_react_steps = settings.max_react_steps
@@ -38,6 +40,7 @@ class MultiAgentOrchestrator:
             tm = ToolManager(
                 use_mcp=settings.mcp_enabled,
                 mcp_server_url=settings.mcp_server_url,
+                refund_ledger=self.refund_ledger,
                 allowed_tools=cfg["tools"],
             )
             self.agents[key] = SubAgent(
@@ -53,43 +56,26 @@ class MultiAgentOrchestrator:
         self.memory_manager = MemoryManager(
             client=self.client,
             model=self.model,
-            user_id=settings.memory_user_id,
+            user_id=user_id,
             memory_dir=settings.memory_dir,
             memory_enabled=settings.memory_enabled,
             max_ltm_facts=settings.max_ltm_facts,
         )
 
-        if settings.memory_enabled:
-            from app.agent.tools.memory_tool import set_memory_manager
-            set_memory_manager(self.memory_manager)
+        for agent in self.agents.values():
+            agent.tool_manager.bind_memory_manager(self.memory_manager)
 
         from app.agent.skills import SkillManager
         self.skill_manager = SkillManager(
             skills_dir=settings.skills_dir,
             enabled=settings.skills_enabled,
         )
-        if settings.skills_enabled:
-            from app.agent.tools.skill_tool import set_skill_manager
-            set_skill_manager(self.skill_manager)
+        for agent in self.agents.values():
+            agent.tool_manager.bind_skill_manager(self.skill_manager)
 
-        self.raw_messages: list[dict] = []
-        self.summary: Optional[str] = None
+        self._restore_session()
 
-        loaded = load_session(self.session_path)
-        if loaded:
-            self.summary = loaded["summary"]
-            self.raw_messages = loaded["messages"]
-            if loaded.get("short_term_memory"):
-                self.memory_manager.restore_stm(loaded["short_term_memory"])
-
-    @property
-    def history_size(self) -> int:
-        return len(self.raw_messages)
-
-    def chat(self, user_input: str) -> CustomerServiceResponse:
-        """路由 → 子 Agent 执行 → 结构化提取 → 返回结果。"""
-        self.raw_messages.append({"role": "user", "content": user_input})
-
+    def _answer_user(self, user_input: str) -> str | CustomerServiceResponse:
         agent_key = self.router.route(user_input, self.raw_messages)
         agent = self.agents[agent_key]
         print(f"\n🔀 [路由] → {agent.name}")
@@ -100,34 +86,7 @@ class MultiAgentOrchestrator:
         )
         self.raw_messages.extend(new_messages)
 
-        result = self._extract_structured_response(final_text)
-
-        self.memory_manager.update_short_term(self.raw_messages[-6:])
-
-        self.raw_messages.append(
-            {"role": "assistant", "content": result.model_dump_json(ensure_ascii=False)}
-        )
-
-        if len(self.raw_messages) > self.history_threshold:
-            self._compress_history()
-
-        save_session(
-            self.session_path, self.raw_messages, self.summary,
-            short_term_memory=self.memory_manager.stm_to_dict(),
-        )
-        return result
-
-    def reset(self):
-        self.raw_messages = []
-        self.summary = None
-        self.memory_manager.reset_short_term()
-        delete_session(self.session_path)
-
-    def save(self) -> None:
-        save_session(
-            self.session_path, self.raw_messages, self.summary,
-            short_term_memory=self.memory_manager.stm_to_dict(),
-        )
+        return final_text
 
     def close(self):
         self.memory_manager.consolidate_to_long_term(self.raw_messages, self.summary)
@@ -137,6 +96,7 @@ class MultiAgentOrchestrator:
     def _build_messages(self, agent: SubAgent) -> list[dict]:
         """用子 Agent 的 system prompt 构建消息列表。"""
         system_content = agent.system_prompt
+        system_content += policy_prompt("multi", self.policy_override)
         if self.skill_manager and self.skill_manager.enabled:
             system_content += self.skill_manager.build_catalog_prompt()
 
@@ -146,7 +106,7 @@ class MultiAgentOrchestrator:
         messages.extend(self.memory_manager.build_memory_prompt_sections())
         if self.summary:
             messages.append({
-                "role": "system",
+                "role": "user",
                 "content": f"以下是此前对话的摘要，用于延续上下文记忆：\n{self.summary}",
             })
         messages.extend(self.raw_messages)

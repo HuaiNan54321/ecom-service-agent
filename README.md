@@ -25,7 +25,7 @@ python -m examples.appendix_c.diagnose
 
 上面三个入口只用标准库，不需要 API Key。第 9 章另有可选的本地 MCP 实验，须在独立环境安装相应依赖。完整入口、三种可选依赖、显式 `--live` 配置与系统边界见 [examples/README.md](examples/README.md)。实验使用 `AGENTBOOK_*` 环境变量且不自动读 `.env`；下面的主应用使用 `OPENAI_*` / `MODEL_NAME` 配置，运行对话和评测可能调用真实模型。
 
-`examples.common.Sandbox` 是独立实验状态环境，与 `app.evaluation.Sandbox` 的真实 Agent 插桩器不同。实验中的身份隔离、退款幂等、快照恢复、自进化报告不是主应用已经接入的业务功能。主系统 MCP v1 与第 9 章的 MCP v2.3 实验使用各自的虚拟环境。
+在 `main.py` 里可以直接办理教学订单的退款。客服登记待确认请求，聊天程序核对用户确认，最终结果写进本地订单账本。想观察「提交成功后恰好断线」的内部步骤，可以再跑第 22 章的故障注入脚本。脚本使用 A1001 等实验订单，主客服使用 ORD 开头的订单。主系统 MCP v1 与第 9 章的 MCP v2.3 实验使用各自的虚拟环境。
 
 ---
 
@@ -70,10 +70,18 @@ python main.py
 | `reset` | 清空当前会话 |
 | `quit` / `exit` | 退出 |
 
+**在聊天里办一笔退款**
+
+在 `.env` 设置 `MEMORY_USER_ID=小红`，启动 `python main.py`。小红有一笔未发货的 1828.90 元教学订单。输入「帮我给 ORD-20240120-002 申请退款，原因是不想要了」。客服显示订单、金额、原因和请求号后，输入 `quit` 退出，再用相同配置重启。启动时会看到待确认的草案，也可以输入 `退款进度 <请求号>` 查看（把占位符换成客服给你的编号）。
+
+输入客服给出的 `确认退款 <请求号>` 后，账本会登记这笔申请，状态变为「退款处理中」。重复发送同一条确认命令，仍可查回原申请。想在确认前放弃，输入 `取消退款 <请求号>`。这些操作读写会话文件同目录的 `refunds.sqlite3`，单客服和多客服共用教学订单账本。
+
+如果是从旧版升级，原来的 `app/sessions/session.json` 可能没有顾客标识。程序会将这份历史保留在原位置，为当前顾客另开会话。从新版开始，会话快照会记下 `MEMORY_USER_ID`，换回同一顾客就能接着聊。长期记忆保存在 `app/sessions/memory/users/`，文件名取顾客标识的 SHA-256。已有的 `memory/小红.json` 等旧文件，在文件内 `user_id` 与当前顾客相符时仍可读取。
+
 **开启进阶能力**（可选，改 `.env` 后重启即可）：
 
 - `MULTI_AGENT_ENABLED=true` —— 多 Agent 协作（售前/售后/投诉分流）
-- `MCP_ENABLED=true` —— 通过 MCP 协议调用工具（需另起 `python mcp_server/server.py`）
+- `MCP_ENABLED=true` —— 启用 MCP 工具服务（另起 `python mcp_server/server.py`）。主聊天中的订单、物流和退款仍由绑定当前顾客的本地账本处理。
 - `RAG_BACKEND=chroma` —— 换用 Chroma 向量数据库（需 `pip install chromadb`）
 
 **跑评估 & 测试**：
@@ -89,6 +97,32 @@ pytest                                # 运行全部单元测试
 最后一条评测命令需要配置模型。它给无工具基线和实际单 Agent 相同的模型、用户消息及任务，各自从新会话开始。模型是否能访问本地订单工具，就是两套系统的能力差异之一。每题首次尝试的答复按预先指定的意图、关键词覆盖率、转人工标记计分。报告列出每条规则的覆盖题数，以及具体哪些题新通过、哪些题退步。单次异常留在分母并单列；若大量请求因模型服务出错，先处理配置再看通过率。
 
 平均工具调用、每题耗时和聊天模型 token 单列对照。token 根据对话接口返回的 usage 汇总，不含检索的嵌入调用；任何题缺少完整用量，整组 token 均值就记为 null，并报告完整记录题数。需要核对“退款申请是否实际写入”，可运行上面的离线实验，查看同一笔订单在执行前后的状态。
+
+### 从主客服的评测记录改进下一轮对话
+
+先跑当前客服，再让程序从实际失败的题中提出一条候选规则。例如，一条要求查系统记录的题里客服没查就答，候选可以是“先调用相应查询工具，再回答具体事实”。候选文字从代码维护的规则清单中选择。顾客原话、差评和工具返回都不会直接写进下次对话的系统提示词。
+
+下面以默认单客服为例，在仓库根目录运行。若曾打开多客服，先在 `.env` 设 `MULTI_AGENT_ENABLED=false`。
+
+```bash
+python -m app.scripts.run_eval --mode single --no-judge --output runs/dev.json
+python -m app.scripts.evolve propose --mode single --report runs/dev.json
+python -m app.scripts.evolve validate --mode single --report runs/dev.json --output runs/validation.json
+```
+
+第一条和第三条会使用你配置的聊天模型。如果已有旧版评测报告，请先用第一条命令重跑，新报告会记录当前客服的模型、评测阈值和策略版本。`propose` 找出能解释最多失败题的一条规则。`validate` 让当前客服和加了这条规则的客服各做一遍 4 道新题，核对家电订单、查询吸尘器续航、处理投诉转人工、回应普通问候。
+
+两边每道题都从新会话开始，使用本地工具，关闭跨会话记忆和 MCP。若没有匹配的失败，或对照中出现运行错误、已通过题退步、总通过数没有增加，就保留当前版本。如果已经拿这 4 题反复调过规则，给 `validate` 加 `--holdout <用例文件>`，换一批尚未用过的工单，格式与主系统 `app/evaluation/cases.json` 一致。
+
+打开 `runs/validation.json`。验证通过时会看到 `eligible: true` 和版本号，`paired.improved` 列出新答对的题，`paired.regressed` 列出从对变错的题。决定采用时，把下面示例中的 `1` 换成报告给出的 `version`。下次启动客服，模型收到的系统提示里就有这条规则。
+
+```bash
+python -m app.scripts.evolve adopt 1 --mode single
+python -m app.scripts.evolve status --mode single
+python main.py
+```
+
+要撤回刚才的版本，运行 `python -m app.scripts.evolve rollback 1 --mode single`，同样把 `1` 换成要撤回的当前版本号。策略状态默认保存在 `app/sessions/policy.sqlite3`，可通过 `POLICY_DB_PATH` 指定位置。验证和聊天请使用相同的客服模式、模型、服务地址和温度。多客服使用相同流程，开发评测和策略命令都传 `--mode multi`，聊天时设置 `MULTI_AGENT_ENABLED=true`。
 
 ---
 
@@ -134,6 +168,8 @@ pytest                                # 运行全部单元测试
 - Memory：短期记忆 & 长期记忆
 - Skill：可复用的能力模块（退货处理、订单跟踪等标准化流程）✅
 - Agent 评估体系 ✅
+- 退款申请确认、跨进程查回与重复确认处理
+- 从客服评测报告生成候选策略，验证后采用或回滚
 
 **生产篇**
 - Guardrails 安全护栏（Prompt Injection 检测、输出幻觉校验、敏感信息过滤、意图越界拦截）
@@ -187,7 +223,7 @@ ecom-service-agent/
 │   │   │       │   └── SKILL.md   # 订单物流跟踪技能（查单→查物流→综合建议）
 │   │   │       └── product-recommend/
 │   │   │           └── SKILL.md   # 商品推荐技能（了解需求→查偏好→搜索→推荐）
-│   │   ├── strategies/            # (upcoming) Agent 执行策略
+│   │   ├── strategies/            # 聊天时读取已采用的客服策略
 │   │   ├── tools/                 # 电商工具集（Function Calling）
 │   │   │   ├── mock_data.py       # Mock 数据：订单、商品、物流
 │   │   │   ├── registry.py        # 本地工具注册表 + OpenAI schema + 分发执行
@@ -195,7 +231,7 @@ ecom-service-agent/
 │   │   │   ├── order.py           # 查询订单详情
 │   │   │   ├── product.py         # 搜索商品信息
 │   │   │   ├── logistics.py       # 查询物流轨迹
-│   │   │   ├── refund.py          # 申请退款
+│   │   │   ├── refund.py          # 退款草案、顾客确认和可跨进程查回的业务账本
 │   │   │   ├── knowledge.py       # search_knowledge：RAG 政策/FAQ 检索
 │   │   │   ├── memory_tool.py     # recall_user_memory：查询用户记忆
 │   │   │   └── skill_tool.py      # load_skill：按需加载技能指令
@@ -222,20 +258,24 @@ ecom-service-agent/
 │   │   ├── sandbox.py             # Sandbox：隔离环境 + 共享 client 插桩 + 采集
 │   │   ├── metrics.py             # 过程/结果双层指标（代码规则 + LLM judge）
 │   │   ├── evaluator.py           # Evaluator：跑用例 → 双层评分 → 聚合报告
-│   │   └── cases.json             # 黄金测试集（~10 条，引用 mock 数据）
+│   │   ├── cases.json             # 开发用例（教学订单与业务咨询）
+│   │   └── evolution_holdout.json # 验证候选客服规则的留出用例
 │   ├── multi_agent/               # Multi-Agent 协作（第6期）
 │   │   ├── router.py              # 意图路由器（LLM 分类 → 子 Agent）
 │   │   ├── agents.py              # SubAgent 子 Agent 类 + 配置
 │   │   └── orchestrator.py        # 编排器：路由 → 执行 → 结构化提取（集成 MemoryManager + SkillManager）
 │   ├── scripts/
 │   │   ├── build_kb_index.py      # 构建本地索引，嵌入可能调用 API（--backend numpy/chroma）
-│   │   └── run_eval.py            # 批量评估，被测 Agent 仍调用模型（--no-judge 只关闭裁判）
+│   │   ├── run_eval.py            # 批量评估，被测 Agent 仍调用模型（--no-judge 只关闭裁判）
+│   │   └── evolve.py              # 从失败题提取候选规则，验证、采用或回滚
 │   └── sessions/                  # 运行时生成，已 .gitignore
 │       ├── session.json           # 当前会话快照
+│       ├── refunds.sqlite3        # 退款草案、确认状态与申请回执
+│       ├── policy.sqlite3         # 已验证的提示规则版本及采用记录
 │       ├── kb_index.json          # NumpyBackend 索引
 │       ├── chroma/                # ChromaBackend 持久化目录
-│       └── memory/                # 长期记忆存储（按 user_id 分文件）
-│           └── {user_id}.json
+│       └── memory/users/          # 长期记忆存储（按 user_id 分文件）
+│           └── {sha256}.json
 │
 ├── mcp_server/                    # MCP Server（独立微服务）
 │   └── server.py                  # FastMCP + Streamable HTTP，暴露电商工具

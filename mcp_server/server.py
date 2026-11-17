@@ -45,7 +45,7 @@ def query_logistics(order_id: str) -> str:
 
 @mcp.tool()
 def apply_refund(order_id: str, reason: str) -> str:
-    """为指定订单申请退款。注意：这是一个敏感操作，调用前应先与用户确认"""
+    """未绑定顾客会话的远端工具返回办理提示；真实登记由聊天宿主确认。"""
     result = _apply_refund(order_id, reason)
     return json.dumps(result, ensure_ascii=False)
 

@@ -15,24 +15,98 @@
 import json
 import shutil
 import sys
+import tempfile
+import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from app.agent.chat import EcomAgent  # noqa: E402
-from app.agent.storage import load_session, save_session  # noqa: E402
-from app.agent.memory import MemoryManager, ShortTermMemory, LongTermMemory  # noqa: E402
-from app.agent.tools.memory_tool import recall_user_memory, set_memory_manager  # noqa: E402
+from app.agent.storage import load_session  # noqa: E402
+from app.agent.memory import LongTermMemory, MemoryManager, ShortTermMemory  # noqa: E402
+from app.agent.skills import SkillManager  # noqa: E402
+from app.agent.tools.manager import ToolManager  # noqa: E402
+from app.agent.tools.registry import execute_tool  # noqa: E402
+from app.config.settings import settings  # noqa: E402
 
-TEST_SESSION = str(ROOT / "app" / "sessions" / "test_memory_session.json")
-TEST_MEMORY_DIR = str(ROOT / "app" / "sessions" / "test_memory")
+TEST_ROOT = tempfile.TemporaryDirectory()
+TEST_SESSION = Path(TEST_ROOT.name) / "case" / "session.json"
+TEST_MEMORY_DIR = TEST_SESSION.parent / "memory"
 TEST_USER_ID = "test_user_memory"
 
 
+class SessionToolIsolationTest(unittest.TestCase):
+    def test_interleaved_customers_and_unbound_entrypoints(self):
+        with tempfile.TemporaryDirectory() as directory, patch("app.mcp_client.MCPClient") as client:
+            remote = client.return_value
+            remote.connect.return_value = [
+                {"type": "function", "function": {"name": name}}
+                for name in ("recall_user_memory", "load_skill")
+            ]
+            hong_tools = ToolManager(True, "http://unused.invalid")
+            ming_tools = ToolManager()
+            for name, tools in [("小红", hong_tools), ("小明", ming_tools)]:
+                memory = MemoryManager(None, "", user_id=name, memory_dir=directory)
+                memory.stm.facts = [name + "想退货"]
+                tools.bind_memory_manager(memory)
+            hong_tools.bind_skill_manager(SkillManager(enabled=True))
+            ming_tools.bind_skill_manager(SkillManager(enabled=False))
+
+            for name, tools in [("小明", ming_tools), ("小红", hong_tools)]:
+                memory = json.loads(tools.execute_tool("recall_user_memory", {}))
+                self.assertEqual(memory["short_term_facts"], [name + "想退货"])
+                skill = json.loads(tools.execute_tool("load_skill", {"skill_name": "process-return"}))
+                self.assertEqual(skill["success"], name == "小红")
+            for invoke in (execute_tool, ToolManager().execute_tool):
+                self.assertFalse(json.loads(invoke("recall_user_memory", {}))["success"])
+                self.assertFalse(json.loads(invoke("load_skill", {"skill_name": "process-return"}))["success"])
+            self.assertFalse(json.loads(hong_tools.execute_tool("recall_user_memory", {"user_id": "小明"}))["success"])
+            remote.call_tool.assert_not_called()
+
+
+class MemoryOwnerTest(unittest.TestCase):
+    def test_old_memory_is_visible_only_to_its_recorded_owner(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "小红.json"
+            payload = {"user_id": "小红", "facts": [{"content": "需要发票"}]}
+            path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            owner = LongTermMemory("小红", folder)
+            alias = LongTermMemory("./小红", folder)
+            alias.load()
+            self.assertEqual(alias.facts, [])
+            alias.reset()
+            self.assertTrue(path.exists())
+            owner.load()
+            self.assertEqual([fact.content for fact in owner.facts], ["需要发票"])
+            owner.save()
+            alias.save()
+            self.assertNotEqual(alias.memory_path, owner.memory_path)
+            reopened = LongTermMemory("小红", folder)
+            reopened.load()
+            self.assertEqual(reopened.facts, owner.facts)
+            reopened.reset()
+            self.assertFalse(path.exists())
+            self.assertFalse(owner.memory_path.exists())
+            self.assertTrue(alias.memory_path.exists())
+
+    def test_filename_alone_does_not_establish_identity(self):
+        with tempfile.TemporaryDirectory() as folder:
+            a = LongTermMemory("buyer", folder)
+            b = LongTermMemory("BUYER", folder)
+            self.assertNotEqual(a.memory_path, b.memory_path)
+            old_path = Path(folder) / "buyer.json"
+            old_path.write_text(json.dumps({"user_id": "BUYER", "facts": [{"content": "偏好 A"}]}),
+                                encoding="utf-8")
+            a.load()
+            self.assertEqual(a.facts, [])
+            a.reset()
+            self.assertTrue(old_path.exists())
+
+
 def _clean():
-    Path(TEST_SESSION).unlink(missing_ok=True)
-    shutil.rmtree(TEST_MEMORY_DIR, ignore_errors=True)
+    shutil.rmtree(TEST_SESSION.parent, ignore_errors=True)
 
 
 def _ok(msg: str):
@@ -46,30 +120,11 @@ def _fail(msg: str):
 
 def _make_agent(threshold: int = 30, keep: int = 6) -> EcomAgent:
     """创建测试用 Agent，使用独立的 session 和 memory 路径。"""
-    import os
-    os.environ["MEMORY_ENABLED"] = "true"
-    os.environ["MEMORY_DIR"] = TEST_MEMORY_DIR
-    os.environ["MEMORY_USER_ID"] = TEST_USER_ID
-
-    from app.config.settings import Settings
-    settings = Settings()
-    settings.memory_enabled = True
-    settings.memory_dir = TEST_MEMORY_DIR
-    settings.memory_user_id = TEST_USER_ID
-
-    agent = EcomAgent(session_path=TEST_SESSION)
+    with patch.multiple(settings, memory_enabled=True, memory_dir=str(TEST_MEMORY_DIR)):
+        agent = EcomAgent(session_path=str(TEST_SESSION), user_id=TEST_USER_ID)
     agent.history_threshold = threshold
     agent.history_keep_recent = keep
 
-    agent.memory_manager = MemoryManager(
-        client=agent.client,
-        model=agent.model,
-        user_id=TEST_USER_ID,
-        memory_dir=TEST_MEMORY_DIR,
-        memory_enabled=True,
-        max_ltm_facts=50,
-    )
-    set_memory_manager(agent.memory_manager)
     return agent
 
 
@@ -127,7 +182,7 @@ def test_stm_persistence():
     agent.chat("我是VIP用户，喜欢打折商品")
     agent.save()
 
-    loaded = load_session(TEST_SESSION)
+    loaded = load_session(agent.session_path)
     if loaded is None:
         _fail("会话文件加载失败")
 
@@ -150,7 +205,7 @@ def test_stm_reset():
     _clean()
     agent = _make_agent()
 
-    agent.chat("我想退货，订单号是 ORD-20240115-001")
+    agent.chat("买鞋我喜欢宽楦，平时穿 42 码，想看看有哪几款合适")
     assert len(agent.memory_manager.stm.facts) > 0, "STM 应有事实"
 
     agent.reset()
@@ -173,7 +228,7 @@ def test_ltm_extraction():
         agent.raw_messages, agent.summary,
     )
 
-    memory_path = Path(TEST_MEMORY_DIR) / f"{TEST_USER_ID}.json"
+    memory_path = agent.memory_manager.ltm.memory_path
     if not memory_path.exists():
         _fail(f"LTM 文件未生成: {memory_path}")
 
@@ -207,7 +262,7 @@ def test_ltm_cross_session():
         agent1.raw_messages, agent1.summary,
     )
 
-    Path(TEST_SESSION).unlink(missing_ok=True)
+    Path(agent1.session_path).unlink()
     agent2 = _make_agent()
 
     ltm_facts = agent2.memory_manager.ltm.facts
@@ -235,7 +290,7 @@ def test_memory_tool():
         agent.raw_messages, agent.summary,
     )
 
-    result = recall_user_memory()
+    result = json.loads(agent.tool_manager.execute_tool("recall_user_memory", {}))
     if not result.get("success"):
         _fail(f"工具返回失败: {result}")
 

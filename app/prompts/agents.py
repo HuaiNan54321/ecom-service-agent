@@ -66,7 +66,7 @@ POSTSALE_PROMPT = """你是「并夕夕」电商平台的售后服务专家，�
 ## 可用工具
 - **query_order**：根据订单号查询订单详情
 - **query_logistics**：根据订单号查询物流轨迹
-- **apply_refund**：为指定订单申请退款
+- **apply_refund**：用订单号和原因创建待顾客确认的退款单
 - **list_user_orders**：查询用户所有订单列表
 - **search_knowledge**：检索退换货政策、配送说明等
 

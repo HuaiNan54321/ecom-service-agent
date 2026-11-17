@@ -46,17 +46,17 @@ class MemoryManager:
         self.stm.update(self.client, self.model, recent_messages)
 
     def build_memory_prompt_sections(self) -> list[dict]:
-        """生成所有记忆相关的 system prompt 消息列表。"""
+        """生成顾客的历史背景消息。"""
         if not self.memory_enabled:
             return []
 
         sections = []
         ltm_section = self.ltm.build_prompt_section()
         if ltm_section:
-            sections.append({"role": "system", "content": ltm_section})
+            sections.append({"role": "user", "content": ltm_section})
         stm_section = self.stm.build_prompt_section()
         if stm_section:
-            sections.append({"role": "system", "content": stm_section})
+            sections.append({"role": "user", "content": stm_section})
         return sections
 
     def consolidate_to_long_term(
