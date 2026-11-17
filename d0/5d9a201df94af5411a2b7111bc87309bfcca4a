@@ -1,0 +1,171 @@
+app/agent/skills/definitions/process-return/SKILL.md
+  s_a75afaffde057e::t_3481169802ce4d 40-41,46
+  s_a75afaffde057e::t_721e3cb016e95b 20,35,37
+app/agent/memory/short_term.py
+  s_a75afaffde057e::t_0e1fd2f2af50c6 4,27
+app/agent/memory/extraction.py
+  s_a75afaffde057e::t_0e1fd2f2af50c6 57,63-64,111,117
+app/agent/strategies/policy.py
+  s_a75afaffde057e::t_6f79632cd3ce0b 23-24,68-72,75-76,89,96-97
+  s_a75afaffde057e::t_30771855bae8ac 1-22,25-67,73-74,77-88,90-95,98-110
+tests/test_conversation_management.py
+  s_a75afaffde057e::t_17fe6e86ff82a2 29
+app/agent/session.py
+  s_a75afaffde057e::t_0fb74a1568c8ae 57-59
+  s_a75afaffde057e::t_f88a2606dcffe6 13,23-27,30,32,34-36,46,63,73,109,116-120
+  s_a75afaffde057e::t_0e1fd2f2af50c6 48-56,65-66,82-85,87-88,98-100
+  s_a75afaffde057e::t_cb54650c26d8d1 1-12,14-22,28-29,31,37-38,41-45,47,60-62,64,67-72,74-81,86,89,92,96-97,101-102,108,110-115
+  s_a75afaffde057e::t_0d5b3ed2984676 33,39-40,90-91,93-95,103-107
+app/agent/storage.py
+  s_a75afaffde057e::t_0e1fd2f2af50c6 3,16-17,29,40,64
+  s_a75afaffde057e::t_0fb74a1568c8ae 36-39,41-43
+app/evaluation/evolution_holdout.json
+  s_a75afaffde057e::t_30771855bae8ac 1-42
+.env.example
+  s_a75afaffde057e::t_721e3cb016e95b 21,33-34
+app/agent/tools/refund.py
+  s_a75afaffde057e::t_07a1646d702e39 66,131-135,141,162,175,179-182
+  s_a75afaffde057e::t_7b1f233fe175c6 80-94,163,189-191
+  s_a75afaffde057e::t_2bdb41b6c09e09 1-9,11-16,20-61,63-65,68-79,95-130,136-140,142-161,164-174,176-178,183-188,192-222,224-232
+app/agent/chat.py
+  s_a75afaffde057e::t_8d9f1d81f284f2 79-81,89
+  s_a75afaffde057e::t_0d5b3ed2984676 47
+  s_a75afaffde057e::t_cb54650c26d8d1 6-7,15-16,18,25-26,34,41,56,65,103,106-108,117-119,184
+  s_a75afaffde057e::t_0e1fd2f2af50c6 58-59,195
+  s_a75afaffde057e::t_0fb74a1568c8ae 54
+app/prompts/customer_service.py
+  s_a75afaffde057e::t_3481169802ce4d 39
+app/scripts/run_eval.py
+  s_a75afaffde057e::t_6f79632cd3ce0b 14,130-131,167-171
+  s_a75afaffde057e::t_0e4515211a34f9 163
+README.md
+  s_a75afaffde057e::t_ffe9cead64ae5f 125
+  s_a75afaffde057e::t_768bb852d916f1 28,77,234
+  s_a75afaffde057e::t_d3b5e4a9a242e1 80,84
+  s_a75afaffde057e::t_9556d383c2bbb3 113-115
+  s_a75afaffde057e::t_0fb33e0f447726 75,261-262,269-270,273-274
+  s_a75afaffde057e::t_146aa20199c72a 79,277-278
+  s_a75afaffde057e::t_7bb1493f4ab5fd 105-110,120-121
+  s_a75afaffde057e::t_c844951d27aeb4 117
+  s_a75afaffde057e::t_1c883993b0b6ad 73-74,76,78,101-104,111-112,116,118-119,122-124,126,171-172,226
+app/agent/tools/skill_tool.py
+  s_a75afaffde057e::t_460a2a58470c6a 14-16,18
+  s_a75afaffde057e::t_37f55e2ec91e1f 3
+app/scripts/evolve.py
+  s_a75afaffde057e::t_a6d8530513f5e4 1-13,17-25,27-30,33-35,39,42-52,54-55,57-67,69,83-84,92-119,121-122,125-128,130-149,152-155,161-163,166-183
+  s_a75afaffde057e::t_6f79632cd3ce0b 14-16,26,36,41,53,56,68,73-79,120,123,129,150-151,156-160,164-165
+  s_a75afaffde057e::t_ea7f07afe6d8e3 31-32,37-38,40,70-72,80-82,85-91,124
+app/multi_agent/orchestrator.py
+  s_a75afaffde057e::t_cb54650c26d8d1 10-11,20,23,30-31,43,59,76,99
+  s_a75afaffde057e::t_0d5b3ed2984676 65-66
+  s_a75afaffde057e::t_0fb74a1568c8ae 73-74
+  s_a75afaffde057e::t_0e1fd2f2af50c6 78,89,109
+app/evaluation/dataset.py
+  s_a75afaffde057e::t_ef01d665a1f61c 41
+  s_a75afaffde057e::t_093fc025c88179 37-40,42-44
+tests/test_policy_evolution.py
+  s_a75afaffde057e::t_8c0ebdae2293c1 62-63,91,99-104,119,122,207-211,213-224
+  s_a75afaffde057e::t_5741c58f444f77 1-15,17-53,55,57-61,64-90,92-98,108-118,120-121,123-147,151-159
+  s_a75afaffde057e::t_079c7caeeaeb84 105-107,148-150
+  s_a75afaffde057e::t_cddadb99f80e58 54,56,212
+  s_a75afaffde057e::t_02b200ec99e142 16,160-183,187,189-206
+  s_a75afaffde057e::t_2db1e95160b3ce 184-186,188
+tests/test_skills.py
+  s_a75afaffde057e::t_460a2a58470c6a 22,86,98,104,115,143
+  s_a75afaffde057e::t_17fe6e86ff82a2 178,192
+tests/test_multi_agent.py
+  s_a75afaffde057e::t_17fe6e86ff82a2 29,120
+app/evaluation/sandbox.py
+  s_a75afaffde057e::t_7390a3a63308d0 72-73,77,106-107
+  s_a75afaffde057e::t_093fc025c88179 84,92,94,105
+tests/test_react_agent.py
+  s_a75afaffde057e::t_17fe6e86ff82a2 17-18,27-28,31-32,39,127-128,130-131,156,166
+mcp_server/server.py
+  s_a75afaffde057e::t_c3cd02b7b296ba 48
+app/evaluation/cases.json
+  s_a75afaffde057e::t_093fc025c88179 27,50-51,92
+examples/README.md
+  s_a75afaffde057e::t_d3b5e4a9a242e1 56
+  s_a75afaffde057e::t_9556d383c2bbb3 51
+  s_a75afaffde057e::t_768bb852d916f1 57
+  s_a75afaffde057e::t_15d5064d6aefb1 47,217
+app/evaluation/evaluator.py
+  s_a75afaffde057e::t_7390a3a63308d0 80-82,227-229,235-241,249-257
+app/agent/tools/memory_tool.py
+  s_a75afaffde057e::t_37f55e2ec91e1f 10-13,17,20,24,26
+tests/test_mcp.py
+  s_a75afaffde057e::t_82a129e73fae8b 22,29,31,37-38,64-68,139-140,144,147,159-161,164,177,199
+app/agent/memory/long_term.py
+  s_a75afaffde057e::t_1ac5a05e52da6e 9,14-15,49-50,52-63,65,67-69,71-78,83-84,89-90,102,105-107,171-174
+  s_a75afaffde057e::t_abe1fa926db27b 100-101,103-104
+  s_a75afaffde057e::t_0e1fd2f2af50c6 149
+tests/test_eval_sandbox_comparison.py
+  s_a75afaffde057e::t_ef01d665a1f61c 6-7,14,67-68,89-91,98-131
+  s_a624830ffe79e3::t_a9f05b4902b2e4 132
+app/prompts/memory.py
+  s_a75afaffde057e::t_0e1fd2f2af50c6 5,26,35,37-38,41
+app/prompts/agents.py
+  s_a75afaffde057e::t_3481169802ce4d 69
+main.py
+  s_a75afaffde057e::t_0d5b3ed2984676 107-108
+  s_a75afaffde057e::t_cb54650c26d8d1 38-43
+app/multi_agent/agents.py
+  s_a75afaffde057e::t_cb54650c26d8d1 12-13,59,99,102-104,115-116
+  s_a75afaffde057e::t_8d9f1d81f284f2 73-75,84
+  s_a75afaffde057e::t_e95f3aacc92303 117
+app/config/settings.py
+  s_a75afaffde057e::t_056edc722b117d 48
+  s_a75afaffde057e::t_7390a3a63308d0 49-50
+app/agent/memory/manager.py
+  s_a75afaffde057e::t_0e1fd2f2af50c6 49,56,59
+tests/test_memory.py
+  s_a75afaffde057e::t_a150a265cdf665 27,32-36,109,123-124,185,208,265
+  s_a75afaffde057e::t_37f55e2ec91e1f 293
+  s_a75afaffde057e::t_57981d07f9d435 18-19,21,29-31,40-66
+  s_a75afaffde057e::t_9e3cb0212ed9c3 28,69-107,231
+  s_a75afaffde057e::t_517515cd2e5fa1 67-68
+app/agent/tools/registry.py
+  s_a75afaffde057e::t_37f55e2ec91e1f 4,23
+  s_a75afaffde057e::t_c3cd02b7b296ba 126
+  s_a75afaffde057e::t_460a2a58470c6a 24
+app/schemas/response.py
+  s_a75afaffde057e::t_0d5b3ed2984676 4,24-25
+  s_a75afaffde057e::t_ed208ae81ac708 26
+tests/test_refund_ledger.py
+  s_a75afaffde057e::t_26000459f93bb3 1-80
+  s_a75afaffde057e::t_7b1f233fe175c6 81-88
+app/agent/tools/manager.py
+  s_a75afaffde057e::t_460a2a58470c6a 16,20,35,45-46,110,114-117,122,124-127,129
+  s_a75afaffde057e::t_37f55e2ec91e1f 7-8,10,12,17-19,34,48-55,111-113,123,128,130
+  s_a75afaffde057e::t_c3cd02b7b296ba 13,31,33,47,56,131-138
+  s_a75afaffde057e::t_c44ef164df8b0e 139
+tests/test_runtime_integration.py
+  s_a75afaffde057e::t_12cd5d258cbecc 1-8,10-58,60
+  s_a75afaffde057e::t_43440b1ca5b7ed 9,59
+tests/test_chat_context.py
+  s_a75afaffde057e::t_cc15e7d34a4441 1-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "d05d9a201df94af5411a2b7111bc87309bfcca4a",
+  "prompts": {},
+  "sessions": {
+    "s_a624830ffe79e3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e78c-518f-73d0-a296-f78eb008865f",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "HuaiNan <amy095200@gmail.com>"
+    },
+    "s_a75afaffde057e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d3b6-5e26-75e0-8f9f-d33c5946ed0c",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "HuaiNan <amy095200@gmail.com>"
+    }
+  }
+}
